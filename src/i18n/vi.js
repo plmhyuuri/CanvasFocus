@@ -47,8 +47,7 @@
     notCompleted: "Chưa hoàn thành",
 
     // Diagnostics overlay
-    debugHint: "Nếu một mục báo “không khớp”, hãy sửa trong src/canvas/selectors.js.",
-    debugFields: "Kết quả selector",
+    debugHint: "Nếu một mục báo “MISS”, hãy sửa trong src/canvas/selectors.js.",
     debugCounts: "Đã quét",
     debugNone: "Chưa quét dữ liệu.",
 

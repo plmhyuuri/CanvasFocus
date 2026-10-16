@@ -36,13 +36,26 @@
     return "unknown";
   }
 
-  /** Read completion state from the row's indicator, if present. */
+  /**
+   * Read completion state. Canvas signals this in two places, in priority order:
+   *   1. `completed_item` class on the row itself (most common; the indicator
+   *      element often isn't rendered at all until completion requirements exist)
+   *   2. a completion indicator child element
+   * Must NOT return early on a missing indicator, or (1) becomes unreachable.
+   */
   function readCompleted(row) {
+    if (row.classList.contains("completed_item")) return true;
+
     const indicator = pick(row, CF.selectors.SELECTORS.itemCompletion, "itemCompletion");
     if (!indicator) return false;
-    if (indicator.classList.contains("completed")) return true;
-    if (row.classList.contains("completed_item")) return true;
-    // Canvas renders a checkmark / "completed" icon; text sniff as a last resort.
+
+    if (
+      indicator.classList.contains("completed") ||
+      indicator.classList.contains("completed_item")
+    ) {
+      return true;
+    }
+    // Canvas renders a checkmark / "completed" icon; sniff its label as a last resort.
     const label = (indicator.getAttribute("title") || indicator.textContent || "").toLowerCase();
     return /complete|done|hoàn thành/.test(label);
   }
@@ -96,13 +109,10 @@
     });
 
     cache = { courseId, courseName: readCourseName(), modules };
-    if (CF.debug) {
-      CF.debugReports.push({
-        label: "scan",
-        matched: `${modules.length} modules, ${modules.reduce((n, m) => n + m.items.length, 0)} items`,
-        ok: modules.length > 0,
-      });
-    }
+    CF.debugReport("scan", {
+      ok: modules.length > 0,
+      matched: `${modules.length} modules, ${modules.reduce((n, m) => n + m.items.length, 0)} items`,
+    });
     return cache;
   }
 

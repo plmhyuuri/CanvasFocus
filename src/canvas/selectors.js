@@ -40,12 +40,15 @@
     /** The element that gets replaced on SPA navigation; observation root. */
     mainContent: ["#content", "#main", ".ic-Layout-contentMain", "body"],
 
-    /** Course title, shown in the panel header. */
+    /** Course title, shown in the panel header. Falls back to document.title. */
     courseName: [
-      ".ic-app-header__main-navigation .ellipsible",
-      "#breadcrumbs .ellipsible",
+      ".ic-app-crumbs a",
+      ".ic-app-crumbs li a",
+      "#breadcrumbs li a",
       ".ellipsible",
+      ".ic-app-header__main-navigation .ellipsible",
       "h1.page-title",
+      "[data-testid='course-name']",
     ],
 
     /** One container element per Canvas module. */
@@ -71,11 +74,21 @@
     /** Anchor to the item's destination (used as a fallback for reveal). */
     itemLink: [".item_name a", "a.ig-title", "a"],
 
-    /** Completion indicator on an item. */
+    /**
+     * Completion indicator on an item.
+     *
+     * NOTE: on many student Modules pages Canvas renders NOTHING here unless the
+     * course's modules define completion requirements — a MISS on every item is
+     * normal and harmless (the row-level `completed_item` check in
+     * providers/dom.js readCompleted() still catches completion).
+     */
     itemCompletion: [
       ".completion_status",
       ".completed_item",
       ".completion_indicator",
+      "[class*='completion']",
+      ".module-item-status",
+      ".icon-check",
     ],
   };
 
@@ -120,15 +133,11 @@
         continue;
       }
       if (el) {
-        if (CF.debug) {
-          CF.debugReports.push({ label, matched: selector, ok: true });
-        }
+        CF.debugReport(label, { ok: true, matched: selector });
         return el;
       }
     }
-    if (CF.debug) {
-      CF.debugReports.push({ label, matched: null, ok: false, tried: list.slice() });
-    }
+    CF.debugReport(label, { ok: false, tried: list.slice() });
     return null;
   }
 
@@ -144,15 +153,11 @@
         continue;
       }
       if (nodes.length) {
-        if (CF.debug) {
-          CF.debugReports.push({ label, matched: selector, ok: true, count: nodes.length });
-        }
+        CF.debugReport(label, { ok: true, matched: selector });
         return nodes;
       }
     }
-    if (CF.debug) {
-      CF.debugReports.push({ label, matched: null, ok: false, tried: list.slice() });
-    }
+    CF.debugReport(label, { ok: false, tried: list.slice() });
     return [];
   }
 

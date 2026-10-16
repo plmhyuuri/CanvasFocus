@@ -99,6 +99,11 @@
    * Try to derive a subject key from arbitrary course text (name or code).
    * Looks for a known Vietnamese subject name inside the text. Returns null when
    * nothing matches — callers should then just show the raw course name.
+   *
+   * KNOWN LIMITATION: this is a loose substring match, so generic names can
+   * false-positive ("KHÓA HỌC" contains "HÓA HỌC"). Fine while the result is only
+   * a decorative label; tokenize/anchor the match before using it for anything
+   * load-bearing. See tests/subjects.test.js for the characterization test.
    */
   function subjectKeyFromText(text) {
     if (!text) return null;

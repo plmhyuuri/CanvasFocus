@@ -78,8 +78,13 @@ in `selectors.js` instead.
 ## Verify
 
 ```
-npm run check     # node --check on every .js + manifest.json validity
+npm test          # pure-logic tests: week parsing, subject mapping, i18n key parity
+npm run check     # node --check on every .js + manifest references resolve
 ```
+
+`npm test` needs no dependencies (Node's built-in test runner) and covers the
+logic that does **not** need a browser. Anything DOM-related is verified manually
+against a live Canvas page, since that is the only environment where it's real.
 
 Then load unpacked (Chrome) / temporary add-on (Firefox) and confirm, on a real
 Modules page:
@@ -136,6 +141,7 @@ src/
   popup/                   toolbar popup (on/off, language, diagnostics)
 icons/                     generated PNGs
 scripts/                   check.js, make-icons.py
+tests/                     node:test suites for the pure logic (no deps)
 ```
 
 ### The one seam that keeps B2 cheap

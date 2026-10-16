@@ -195,7 +195,7 @@
     const provider = CF.providers.get();
     if (typeof provider.invalidate === "function") provider.invalidate();
     CF.weeks.clearCache();
-    if (CF.debug) CF.debugReports.length = 0;
+    CF.resetDebugReports();
 
     const courses = await provider.getCourses();
     const course = courses[0] || null;
@@ -430,23 +430,27 @@
     counts.textContent = `${t("debugCounts")}: ${state.counts.modules} modules · ${state.counts.items} items`;
     wrap.appendChild(counts);
 
-    const reports = CF.debugReports || [];
+    // Aggregated per field, so a 100-item course stays readable. Misses first —
+    // they are the actionable ones.
+    const reports = Array.from((CF.debugReports || new Map()).values());
     if (!reports.length) {
       const none = document.createElement("div");
       none.className = "cf-dim";
       none.textContent = t("debugNone");
       wrap.appendChild(none);
     } else {
-      const list = document.createElement("div");
-      list.className = "cf-dim";
-      list.textContent = t("debugFields");
-      wrap.appendChild(list);
+      reports.sort((a, b) => (a.miss > 0 ? 0 : 1) - (b.miss > 0 ? 0 : 1) || a.label.localeCompare(b.label));
 
       for (const report of reports) {
         const line = document.createElement("div");
+
         const status = document.createElement("span");
-        status.className = report.ok ? "cf-ok" : "cf-bad";
-        status.textContent = report.ok ? "OK " : "MISS ";
+        const miss = report.miss > 0;
+        status.className = miss ? "cf-bad" : "cf-ok";
+        // e.g. "[OK x104]" / "[MISS x3]"
+        status.textContent = miss
+          ? `[MISS x${report.miss}] `
+          : `[OK x${report.ok}] `;
         line.appendChild(status);
 
         const label = document.createElement("span");
@@ -454,9 +458,9 @@
         line.appendChild(label);
 
         const detail = document.createElement("code");
-        detail.textContent = report.ok
-          ? report.matched
-          : `none of ${(report.tried || []).join(", ")}`;
+        detail.textContent = miss
+          ? `none of ${(report.tried || []).join(", ")}`
+          : report.matched;
         line.appendChild(detail);
         wrap.appendChild(line);
       }

@@ -50,8 +50,7 @@
     notCompleted: "Not completed",
 
     // Diagnostics overlay
-    debugHint: "If a field shows “no match”, update it in src/canvas/selectors.js.",
-    debugFields: "Selector results",
+    debugHint: "If a field shows “MISS”, update it in src/canvas/selectors.js.",
     debugCounts: "Scanned",
     debugNone: "No data scanned yet.",
 

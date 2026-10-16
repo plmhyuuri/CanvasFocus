@@ -103,8 +103,37 @@
   /** Debug mode is toggled at runtime by bootstrap (URL `?debug` or stored flag). */
   CF.debug = false;
 
-  /** Human-readable reports collected by selectors.js when debug is on. */
-  CF.debugReports = [];
+  /**
+   * Aggregated diagnostics, keyed by field label (e.g. "itemCompletion").
+   *
+   * Aggregated rather than appended because `pick()` runs once per module item:
+   * a 100-item course would otherwise emit 100 lines per field and make the
+   * overlay useless. We keep counts plus the last matched/tried selector.
+   *
+   *   label -> { label, ok, miss, matched, tried }
+   */
+  CF.debugReports = new Map();
+
+  /** Record one selector lookup result. No-op unless debug mode is on. */
+  CF.debugReport = function debugReport(label, { ok, matched, tried }) {
+    if (!CF.debug) return;
+    let report = CF.debugReports.get(label);
+    if (!report) {
+      report = { label, ok: 0, miss: 0, matched: null, tried: null };
+      CF.debugReports.set(label, report);
+    }
+    if (ok) {
+      report.ok += 1;
+      if (matched) report.matched = matched;
+    } else {
+      report.miss += 1;
+      if (tried) report.tried = tried;
+    }
+  };
+
+  CF.resetDebugReports = function resetDebugReports() {
+    CF.debugReports = new Map();
+  };
 
   CF.log = (...args) => console.log(PREFIX, ...args);
   CF.warn = (...args) => console.warn(PREFIX, ...args);
