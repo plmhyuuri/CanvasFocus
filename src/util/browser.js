@@ -108,23 +108,25 @@
    *
    * Aggregated rather than appended because `pick()` runs once per module item:
    * a 100-item course would otherwise emit 100 lines per field and make the
-   * overlay useless. We keep counts plus the last matched/tried selector.
+   * overlay useless. We keep counts plus the last matched/tried selector and an
+   * optional `note` (e.g. the matched element's tag/classes when a fallback hit).
    *
-   *   label -> { label, ok, miss, matched, tried }
+   *   label -> { label, ok, miss, matched, tried, note }
    */
   CF.debugReports = new Map();
 
   /** Record one selector lookup result. No-op unless debug mode is on. */
-  CF.debugReport = function debugReport(label, { ok, matched, tried }) {
+  CF.debugReport = function debugReport(label, { ok, matched, tried, note }) {
     if (!CF.debug) return;
     let report = CF.debugReports.get(label);
     if (!report) {
-      report = { label, ok: 0, miss: 0, matched: null, tried: null };
+      report = { label, ok: 0, miss: 0, matched: null, tried: null, note: null };
       CF.debugReports.set(label, report);
     }
     if (ok) {
       report.ok += 1;
       if (matched) report.matched = matched;
+      if (note) report.note = note;
     } else {
       report.miss += 1;
       if (tried) report.tried = tried;

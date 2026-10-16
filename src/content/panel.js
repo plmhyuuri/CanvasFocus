@@ -462,6 +462,13 @@
           ? `none of ${(report.tried || []).join(", ")}`
           : report.matched;
         line.appendChild(detail);
+
+        if (report.note) {
+          const note = document.createElement("span");
+          note.className = "cf-dim";
+          note.textContent = `  ← ${report.note}`;
+          line.appendChild(note);
+        }
         wrap.appendChild(line);
       }
     }

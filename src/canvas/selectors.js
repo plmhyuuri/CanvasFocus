@@ -115,6 +115,20 @@
   const MODULE_ID_RE = /context_module_(\d+)/;
 
   /**
+   * Human-readable description of an element for diagnostics: tag + classes.
+   * Used to surface the REAL markup when a fallback selector matched, so the
+   * primary list can be tightened without hand-inspecting the page.
+   */
+  function describeElement(el) {
+    if (!el) return "";
+    const tag = el.tagName ? el.tagName.toLowerCase() : "?";
+    const classes = (el.className && String(el.className).trim())
+      ? "." + String(el.className).trim().split(/\s+/).slice(0, 4).join(".")
+      : "";
+    return tag + classes;
+  }
+
+  /**
    * Find the first element matching any selector in `list`, in order.
    *
    * @param {ParentNode} root  element/document to query within
@@ -124,7 +138,8 @@
    */
   function pick(root, list, label) {
     if (!root || !Array.isArray(list)) return null;
-    for (const selector of list) {
+    for (let index = 0; index < list.length; index += 1) {
+      const selector = list[index];
       let el = null;
       try {
         el = root.querySelector(selector);
@@ -133,7 +148,10 @@
         continue;
       }
       if (el) {
-        CF.debugReport(label, { ok: true, matched: selector });
+        // Note when a *fallback* matched: the primary selector is stale and the
+        // reported element tells you what to write instead.
+        const note = index > 0 ? `fallback #${index + 1}: <${describeElement(el)}>` : null;
+        CF.debugReport(label, { ok: true, matched: selector, note });
         return el;
       }
     }
@@ -144,7 +162,8 @@
   /** Like pick(), but returns every match across the first selector that hits. */
   function pickAll(root, list, label) {
     if (!root || !Array.isArray(list)) return [];
-    for (const selector of list) {
+    for (let index = 0; index < list.length; index += 1) {
+      const selector = list[index];
       let nodes = [];
       try {
         nodes = Array.from(root.querySelectorAll(selector));
@@ -153,7 +172,8 @@
         continue;
       }
       if (nodes.length) {
-        CF.debugReport(label, { ok: true, matched: selector });
+        const note = index > 0 ? `fallback #${index + 1}: <${describeElement(nodes[0])}>` : null;
+        CF.debugReport(label, { ok: true, matched: selector, note });
         return nodes;
       }
     }
