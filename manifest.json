@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "CanvasFocus",
+  "version": "0.1.0",
+  "description": "A cleaner, searchable, week-grouped view of your Canvas course modules.",
+  "content_scripts": [
+    {
+      "matches": ["https://lms.vinschool.edu.vn/*"],
+      "js": [
+        "src/util/browser.js",
+        "src/canvas/selectors.js",
+        "src/canvas/weeks.js",
+        "src/canvas/subjects.js",
+        "src/i18n/en.js",
+        "src/i18n/vi.js",
+        "src/i18n/index.js",
+        "src/providers/index.js",
+        "src/providers/dom.js",
+        "src/content/route.js",
+        "src/content/panel.css.js",
+        "src/content/panel.js",
+        "src/content/bootstrap.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage"],
+  "host_permissions": ["https://lms.vinschool.edu.vn/*"],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "CanvasFocus",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "canvasfocus@example.com",
+      "strict_min_version": "115.0"
+    }
+  }
+}

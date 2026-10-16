@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CanvasFocus</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="popup-head">
+        <span class="popup-logo">CF</span>
+        <div>
+          <div class="popup-name">CanvasFocus</div>
+          <div class="popup-version" id="version"></div>
+        </div>
+      </header>
+
+      <label class="row">
+        <span data-i18n="popupEnabled">Enable on Canvas</span>
+        <input type="checkbox" id="enabled" />
+      </label>
+
+      <label class="row">
+        <span data-i18n="popupLanguage">Language</span>
+        <select id="language">
+          <option value="en">English</option>
+          <option value="vi">Tiếng Việt</option>
+        </select>
+      </label>
+
+      <label class="row">
+        <span data-i18n="popupDiagnostics">Diagnostics overlay</span>
+        <input type="checkbox" id="debug" />
+      </label>
+
+      <p class="hint" data-i18n="popupHint"></p>
+
+      <a class="cta" id="open-canvas" href="https://lms.vinschool.edu.vn/" target="_blank" rel="noopener"
+         data-i18n="popupOpenCanvas">Open Canvas</a>
+    </main>
+
+    <!-- Loaded in dependency order (same convention as the content scripts). -->
+    <script src="../util/browser.js"></script>
+    <script src="../i18n/en.js"></script>
+    <script src="../i18n/vi.js"></script>
+    <script src="../i18n/index.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

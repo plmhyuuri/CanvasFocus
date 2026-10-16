@@ -1,0 +1,12 @@
+{
+  "name": "canvasfocus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A cleaner, searchable, week-grouped view of your Canvas course modules. No build step.",
+  "scripts": {
+    "check": "node scripts/check.js",
+    "icons": "python3 scripts/make-icons.py",
+    "zip": "node scripts/check.js && zip -r canvasfocus.zip manifest.json src icons -x '*.DS_Store'"
+  },
+  "license": "MIT"
+}
