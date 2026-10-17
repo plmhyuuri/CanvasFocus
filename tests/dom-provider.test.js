@@ -307,6 +307,30 @@ test("exposes `tracked` from Canvas requirement classes (pending vs unknown)", a
   );
 });
 
+test("item id falls back to the stable object-id class when the row has no id", async () => {
+  modules = [
+    makeModule({
+      id: "context_module_1",
+      title: "Tuần 1",
+      rows: [
+        // Canvas sometimes omits the `id` attribute; the object-id class is stable.
+        el({
+          tag: "LI",
+          className: "context_module_item student-view lti-quiz indent_1 _requirement Quiz_2253163 rendered",
+          children: {
+            ".item_name .ig-title": el({ tag: "A", className: "ig-title", text: "Q" }),
+            ".item_name a": el({ tag: "A", className: "ig-title", href: "/q" }),
+          },
+        }),
+      ],
+    }),
+  ];
+  crumbs = [];
+  provider = buildProvider();
+  const items = await provider.getItems("9", "1");
+  assert.equal(items[0].id, "Quiz_2253163", "object id, not `indent_1` or position");
+});
+
 test("getCompletion() maps every item id to its boolean", async () => {
   modules = [
     makeModule({

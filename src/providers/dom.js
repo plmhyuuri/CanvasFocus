@@ -166,7 +166,7 @@
     const { completed, tracked } = readCompletion(row);
 
     return {
-      id: row.id || `${moduleId}:${index}`,
+      id: row.id || objectIdFromRow(row) || `${moduleId}:${index}`,
       title,
       type,
       url: linkEl ? linkEl.href : null,
@@ -197,14 +197,27 @@
    * Canvas class names minus the per-object id token. Every item row carries a
    * class like `Quiz_2253163` / `WikiPage_2702512`, which would otherwise make
    * every row look unique. Stripping them lets us compare rows by their MEANINGFUL
-   * classes (`completed_item`, `dupeable`, `indent_1`, …).
+   * classes (`completed_item`, `dupeable`, …).
+   *
+   * The `{3,}` digit floor matters: `indent_0` / `indent_1` also look like
+   * `word_<digits>`, and Canvas object ids are always longer.
    */
-  const OBJECT_ID_CLASS = /^[A-Za-z][A-Za-z0-9]*_\d+$/;
+  const OBJECT_ID_CLASS = /^[A-Za-z][A-Za-z0-9]*_\d{3,}$/;
 
   function classTokens(className) {
     return String(className || "")
       .split(/\s+/)
       .filter((c) => c && !OBJECT_ID_CLASS.test(c));
+  }
+
+  /**
+   * Stable per-item identity. Prefer Canvas's `id` attribute; fall back to the
+   * object-id class (`Quiz_2253163`) so the id survives reordering — which matters
+   * because manual "done" marks are stored against it. Position is the last resort.
+   */
+  function objectIdFromRow(row) {
+    const match = String(row.className || "").match(/[A-Za-z][A-Za-z0-9]*_\d{3,}/);
+    return match ? match[0] : null;
   }
 
   /** Scan the page into the same shape the contract exposes (cached). */
