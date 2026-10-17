@@ -10,6 +10,8 @@ done** at a glance.
 It reads the page Canvas has **already rendered**. There is **no Canvas API, no
 token, no OAuth, no developer key, and no backend** — nothing leaves your browser.
 
+![The CanvasFocus panel open beside a Canvas Modules page, with items grouped by week and completion markers showing](docs/screenshot.png)
+
 > Built and verified against a live **Vinschool** Canvas course, but it targets
 > Canvas's standard Modules markup, so it works on other Canvas instances too
 > (see [Point it at your Canvas](#point-it-at-your-canvas)).
@@ -164,8 +166,10 @@ src/
     bootstrap.js           entry: settings -> mount + observe
   popup/                   toolbar popup (on/off, language, diagnostics)
 icons/                     generated PNGs
+docs/                      README screenshot
 scripts/                   check.js, make-icons.py
 tests/                     node:test suites for the pure logic (no deps)
+LICENSE                    MIT
 ```
 
 ### Architecture (why it's shaped this way)
@@ -298,3 +302,9 @@ Open an issue or PR at
 **[github.com/plmhyuuri/CanvasFocus](https://github.com/plmhyuuri/CanvasFocus/issues)**.
 For Canvas-markup problems, include the `?debug` diagnostics output — it usually
 points straight at the selector to fix.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 Phạm Lê Mạnh Hùng
