@@ -90,7 +90,6 @@
       ".completed_item",
       ".completion_status.completed",
       ".completion_indicator.completed",
-      ".completion_requirement.completed",
       "[aria-label*='Completed']",
       "[aria-label*='Hoàn thành']",
       ".icon-check",
@@ -111,6 +110,27 @@
     "external_url",
     "file",
     "subheader",
+  ];
+
+  /**
+   * Item-row classes that describe a REQUIREMENT, i.e. what the item demands to be
+   * considered complete — NOT whether it is complete. Do NOT add these to
+   * `itemCompletedMarker`; doing so would mark every tracked item "done".
+   *
+   * Verified against the live Vinschool course (104 item rows):
+   *   _requirement x97, progression_requirement x7, must_submit_requirement x6,
+   *   must_view_requirement x1, completed_item x2.
+   * The only class asserting completion was `completed_item` (x2), matching the
+   * two "Đã gửi / Mục học phần đã được nộp và hoàn thành" rows in Canvas's own UI.
+   *
+   * Kept as class NAMES (checked with classList.contains), not selectors, because
+   * they sit on the row itself.
+   */
+  const ITEM_REQUIREMENT_CLASSES = [
+    "_requirement",
+    "must_submit_requirement",
+    "must_view_requirement",
+    "progression_requirement",
   ];
 
   /**
@@ -200,6 +220,7 @@
   CF.selectors = {
     SELECTORS,
     ITEM_TYPES,
+    ITEM_REQUIREMENT_CLASSES,
     COURSE_ID_RE,
     MODULE_ID_RE,
     pick,

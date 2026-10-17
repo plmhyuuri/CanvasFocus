@@ -50,6 +50,12 @@ open the panel, search, and jump to items.
   `<span class="completion_requirement">` is a requirement *description*, not
   state. So CanvasFocus never guesses: no marker means no ✓ (never a "not
   completed" claim). See `readCompleted()` in `src/providers/dom.js`.
+  - Verified on a live Vinschool course (104 items): the **only** class Canvas uses
+    to assert completion is `completed_item` (x2, matching its own "Đã gửi /
+    hoàn thành" rows). Classes like `must_submit_requirement`,
+    `must_view_requirement`, `progression_requirement` and `_requirement` describe
+    what an item *requires*, not whether it's done — see
+    `ITEM_REQUIREMENT_CLASSES` in `src/canvas/selectors.js`.
 - The **Diagnostics** button (or `?debug` in the URL) shows which DOM selectors
   matched — your first stop when Canvas changes.
 - The **CF** popup toggles the extension on/off, switches EN/VI, and toggles

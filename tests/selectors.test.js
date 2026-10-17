@@ -92,3 +92,18 @@ test("isModulesPage() matches only Modules URLs", () => {
   assert.equal(isModulesPage("https://x/courses/1/assignments"), false);
   assert.equal(isModulesPage("https://x/courses/1/modulesx"), false);
 });
+
+test("requirement classes are NEVER treated as completion markers", () => {
+  const { SELECTORS, ITEM_REQUIREMENT_CLASSES } = CF.selectors;
+  const markers = SELECTORS.itemCompletedMarker.join(" ");
+
+  // The invariant that keeps completion honest: a class describing what an item
+  // REQUIRES ("must submit") must never appear in the completion marker list.
+  for (const cls of ITEM_REQUIREMENT_CLASSES) {
+    assert.ok(
+      !markers.includes(cls),
+      `"${cls}" describes a requirement, not state — it must not be in itemCompletedMarker`
+    );
+  }
+  assert.ok(!markers.includes("completion_requirement"));
+});
