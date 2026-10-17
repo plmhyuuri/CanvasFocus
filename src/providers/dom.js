@@ -21,28 +21,72 @@
   }
 
   /**
-   * Read the course name.
+   * Strings that carry no name information: empty, or punctuation/ellipsis only.
+   * Canvas's crumb bar includes an overflow toggle whose text is literally "…".
+   */
+  const JUNK_NAME = /^[\s.…·•*+\-–—_/|,]*$/;
+
+  /** Canvas page/route words that are never a course name. */
+  const PAGE_WORDS = new Set([
+    "modules", "home", "dashboard", "assignments", "grades", "pages", "files",
+    "syllabus", "quizzes", "discussions", "announcements", "settings", "people",
+    "outcomes", "rubrics", "collaborations", "conferences", "course", "courses",
+    "account", "calendar", "inbox", "history", "student view", "course modules",
+    "groups", "help",
+  ]);
+
+  function looksLikeCourseName(text) {
+    const value = (text || "").trim();
+    if (!value || JUNK_NAME.test(value)) return false;
+    if (PAGE_WORDS.has(value.toLowerCase())) return false;
+    return /[0-9a-zà-ỹ]/i.test(value); // must contain at least one word character
+  }
+
+  /**
+   * Read the course name, choosing among several candidates rather than trusting
+   * the first crumb (breadcrumb bars contain icon-only links and an "…" overflow
+   * toggle, and `document.title` format varies by Canvas version).
    *
-   * Two sources, because Canvas crumb lists often begin with an icon-only link:
-   *   1. A crumb/link that actually carries visible text (scan from the END — the
-   *      deepest crumb is closest to the course name).
-   *   2. `document.title`, which Canvas sets as "<Page Title>: <Course Name>",
-   *      so the course is everything AFTER the first colon.
-   * Keep the resolved value in the scan diagnostic so a wrong guess is visible.
+   * Candidates: crumb-link texts + both halves of `document.title`. Junk and page
+   * words are filtered out; among what remains we prefer one containing a digit
+   * (Vinschool course names include a grade number), then the longest.
+   *
+   * The full candidate list is reported to the diagnostics overlay so a wrong
+   * pick is visible and the heuristic can be replaced with a hard rule.
    */
   function readCourseName() {
-    const crumbs = pickAll(getCourseElement(), CF.selectors.SELECTORS.courseName, "courseName");
-    for (let i = crumbs.length - 1; i >= 0; i -= 1) {
-      const text = (crumbs[i].textContent || "").trim();
-      if (text) return text;
+    const candidates = [];
+
+    for (const crumb of pickAll(
+      getCourseElement(),
+      CF.selectors.SELECTORS.courseName,
+      "courseName"
+    )) {
+      candidates.push((crumb.textContent || "").trim());
     }
 
     const title = (document.title || "").trim();
     if (title.includes(":")) {
-      const after = title.split(":").slice(1).join(":").trim();
-      if (after) return after;
+      const parts = title.split(":");
+      candidates.push(parts[0].trim());
+      candidates.push(parts.slice(1).join(":").trim());
+    } else if (title) {
+      candidates.push(title);
     }
-    return title;
+
+    CF.debugReport("courseNameCandidates", {
+      ok: true,
+      matched: JSON.stringify(candidates),
+    });
+
+    const valid = candidates.filter(looksLikeCourseName);
+    if (!valid.length) return title;
+
+    valid.sort((a, b) => {
+      const digit = (s) => (/\d/.test(s) ? 1 : 0);
+      return digit(b) - digit(a) || b.length - a.length;
+    });
+    return valid[0];
   }
 
   /** Detect the Canvas item type from the row's classes. */

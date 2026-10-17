@@ -160,6 +160,28 @@ test("parses modules, weeks, item types and completion conservatively", async ()
   assert.deepEqual(items.map((i) => i.title), ["Bài tập 1", "Bài đọc", "Kiểm tra"]);
 });
 
+test("ignores the '…' overflow crumb and icon-only crumbs", async () => {
+  modules = [makeModule({ id: "context_module_1", title: "Tuần 1", rows: [] })];
+  // ellipsis toggle LAST (the old code returned it); icon-only first.
+  crumbs = [
+    el({ tag: "A", className: "crumb" }),
+    el({ tag: "A", className: "crumb", text: "TOÁN 10" }),
+    el({ tag: "A", className: "crumb", text: "…" }),
+  ];
+  provider = buildProvider();
+  const [course] = await provider.getCourses();
+  assert.equal(course.name, "TOÁN 10");
+});
+
+test("prefers a course name over a page word from the title", async () => {
+  modules = [makeModule({ id: "context_module_1", title: "Tuần 1", rows: [] })];
+  crumbs = [el({ tag: "A", className: "crumb", text: "Modules" })];
+  provider = buildProvider();
+  globalThis.document.title = "Modules: TOÁN 10";
+  const [course] = await provider.getCourses();
+  assert.equal(course.name, "TOÁN 10", "drops the page word, keeps the course");
+});
+
 test("falls back to document.title (part after the first colon) when no crumbs", async () => {
   modules = [makeModule({ id: "context_module_1", title: "Tuần 3", rows: [] })];
   crumbs = [];

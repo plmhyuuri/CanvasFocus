@@ -465,9 +465,12 @@
         line.appendChild(label);
 
         const detail = document.createElement("code");
-        detail.textContent = miss
-          ? `none of ${(report.tried || []).join(", ")}`
-          : report.matched;
+        if (miss) {
+          const tried = report.tried || [];
+          detail.textContent = tried.length ? `none of ${tried.join(", ")}` : "no signal";
+        } else {
+          detail.textContent = report.matched;
+        }
         line.appendChild(detail);
 
         if (report.note) {
