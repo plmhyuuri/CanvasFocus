@@ -166,19 +166,57 @@
     };
   }
 
+  /** First element matching any selector in `list`, WITHOUT recording diagnostics. */
+  function peek(root, list) {
+    if (!root || !Array.isArray(list)) return null;
+    for (const selector of list) {
+      try {
+        const el = root.querySelector(selector);
+        if (el) return el;
+      } catch (_err) {
+        /* ignore invalid selectors here — pick()/pickAll() already report them */
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Canvas class names minus the per-object id token. Every item row carries a
+   * class like `Quiz_2253163` / `WikiPage_2702512`, which would otherwise make
+   * every row look unique. Stripping them lets us compare rows by their MEANINGFUL
+   * classes (`completed_item`, `dupeable`, `indent_1`, …).
+   */
+  const OBJECT_ID_CLASS = /^[A-Za-z][A-Za-z0-9]*_\d+$/;
+
+  function classTokens(className) {
+    return String(className || "")
+      .split(/\s+/)
+      .filter((c) => c && !OBJECT_ID_CLASS.test(c));
+  }
+
   /** Scan the page into the same shape the contract exposes (cached). */
   function scan() {
     if (cache) return cache;
 
     const courseId = courseIdFromUrl();
-    // Distinct class strings across item rows — one debug line that reveals how
-    // (or whether) COMPLETED rows differ, without having to inspect the page.
-    const rowClassSet = new Set();
-    const containers = pickAll(
+    // Diagnostics accumulators: rows grouped by their MEANINGFUL classes, and the
+    // distinct class sets of their parents (to catch container-level markers).
+    const rowTokenSets = [];
+    const parentClassSet = new Set();
+    const allContainers = pickAll(
       getCourseElement(),
       CF.selectors.SELECTORS.moduleContainer,
       "moduleContainer"
     );
+    const containers = allContainers.filter((container) => {
+      // Drop Canvas "shell" containers: an empty title AND no item rows. They match
+      // `.context_module` but are not real modules (they'd render as a blank group).
+      const titleEl = peek(container, CF.selectors.SELECTORS.moduleTitle);
+      const hasTitle = !!(titleEl && (titleEl.textContent || "").trim());
+      const hasRows = !!peek(container, CF.selectors.SELECTORS.itemRow);
+      return hasTitle || hasRows;
+    });
+    const droppedShells = allContainers.length - containers.length;
 
     const modules = containers.map((container, index) => {
       const idMatch = (container.id || "").match(MODULE_ID_RE);
@@ -187,7 +225,13 @@
       const title = ((titleEl || container).textContent || "").trim();
 
       const rows = pickAll(container, CF.selectors.SELECTORS.itemRow, "itemRow");
-      for (const row of rows) rowClassSet.add((row.className || "").trim());
+      for (const row of rows) {
+        rowTokenSets.push(classTokens(row.className));
+        const parent = row.parentElement;
+        if (parent && typeof parent.className === "string" && parent.className.trim()) {
+          parentClassSet.add(classTokens(parent.className).sort().join(" "));
+        }
+      }
       const items = rows.map((row, i) => parseItem(row, moduleId, i));
 
       return {
@@ -209,7 +253,9 @@
       matched:
         `${modules.length} modules, ${items.length} items · ` +
         `course: ${courseName ? JSON.stringify(courseName) : "(empty)"}`,
-      note: `completion: ${completed}/${items.length} confirmed`,
+      note:
+        `completion: ${completed}/${items.length} confirmed` +
+        (droppedShells ? ` · skipped ${droppedShells} empty container(s)` : ""),
     });
 
     // Name any module that yielded no items — usually one Canvas hasn't finished
@@ -219,12 +265,32 @@
       CF.debugReport("modulesWithoutItems", { ok: true, matched: JSON.stringify(emptyModules) });
     }
 
-    // Show the distinct item-row class sets. If completed rows carry a marker we
-    // don't yet use, it will appear here as an extra entry.
-    if (items.length) {
+    // Classes that appear on SOME rows but not all — i.e. what makes rows differ.
+    // If completed rows carry a marker we don't yet use, it shows up here.
+    if (rowTokenSets.length) {
+      const freq = new Map();
+      for (const tokens of rowTokenSets) {
+        for (const token of new Set(tokens)) freq.set(token, (freq.get(token) || 0) + 1);
+      }
+      const total = rowTokenSets.length;
+      const rank = (token) => (/complete/i.test(token) ? 0 : 1);
+      const distinguishing = [...freq.entries()]
+        .filter(([, n]) => n < total)
+        .sort((a, b) => rank(a[0]) - rank(b[0]) || b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([token, n]) => `${token}×${n}`);
       CF.debugReport("itemRowClasses", {
         ok: true,
-        matched: JSON.stringify([...rowClassSet].slice(0, 8)),
+        matched: JSON.stringify(distinguishing.slice(0, 20)),
+        note: `${total} rows`,
+      });
+    }
+
+    // Distinct class sets of the rows' PARENTS — catches completion indicated on a
+    // wrapping element (e.g. a "completed items" container) rather than the row.
+    if (parentClassSet.size) {
+      CF.debugReport("itemParentClasses", {
+        ok: true,
+        matched: JSON.stringify([...parentClassSet].slice(0, 12)),
       });
     }
 

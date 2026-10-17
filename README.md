@@ -75,10 +75,13 @@ When something breaks:
    or `MISS` with the ones it tried. A few lines carry extra context rather than
    selector results: `scan` (module/item counts + resolved course name +
    confirmed-completion count), `courseNameCandidates` (every string considered
-   for the header), `itemRowClasses` (the distinct class strings of item rows —
-   how you'd spot a completion marker we don't use yet), and `modulesWithoutItems`
-   (a module that parsed to zero items — usually one Canvas hadn't finished
-   rendering; the panel re-scans).
+   for the header), `itemRowClasses` (classes that appear on *some* rows but not
+   all, with counts — how you'd spot a completion marker we don't use yet),
+   `itemParentClasses` (class sets of the rows' parents — catches a marker on a
+   wrapping element), and `modulesWithoutItems` (a module that parsed to zero
+   items — usually one Canvas hadn't finished rendering; the panel re-scans).
+   Note: Canvas bakes a per-object id into each row's class (`Quiz_2253163`),
+   which the `itemRowClasses` line strips before comparing.
 3. Inspect the live page (right-click → Inspect) and **add a new selector to the
    front of the relevant list** in `selectors.js`. Do not delete the old ones
    unless you're sure they're gone — keeping them costs nothing.

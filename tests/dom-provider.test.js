@@ -27,7 +27,7 @@ function el(opts = {}) {
     children = {},
   } = opts;
   const classes = className.split(/\s+/).filter(Boolean);
-  return {
+  const node = {
     tagName: tag,
     className,
     id,
@@ -35,10 +35,22 @@ function el(opts = {}) {
     href,
     classList: { contains: (c) => classes.includes(c) },
     getAttribute: (name) => (name in attrs ? attrs[name] : null),
-    querySelector: (sel) => children[sel] || null,
+    // Real DOM semantics: querySelector returns ONE element or null, so an empty
+    // child list must yield null (not `[]`, which is truthy).
+    querySelector: (sel) => {
+      const value = children[sel];
+      if (Array.isArray(value)) return value[0] || null;
+      return value || null;
+    },
     querySelectorAll: (sel) => children[sel] || [],
     closest: () => null,
   };
+  // Wire parentElement so ancestor-based diagnostics have something to read.
+  for (const value of Object.values(children)) {
+    const list = Array.isArray(value) ? value : [value];
+    for (const child of list) if (child && typeof child === "object") child.parentElement = node;
+  }
+  return node;
 }
 
 /** A module row factory; `completed` flags drive expected output. */
@@ -207,24 +219,45 @@ test("exposes a short subject name derived from the Canvas code string", async (
   assert.equal(course.subjectKey, "MATHS");
 });
 
-test("reports item-row classes and empty modules in debug mode", async () => {
+test("reports distinguishing row/parent classes and drops empty-titled shells", async () => {
   modules = [
     makeModule({
       id: "context_module_1",
       title: "Tuần 1",
-      rows: [makeRow({ id: "a", type: "page", title: "P" })],
+      rows: [
+        makeRow({ id: "a", type: "page", title: "P" }),
+        makeRow({ id: "b", type: "quiz", title: "Q" }),
+        makeRow({
+          id: "c",
+          type: "quiz",
+          title: "Q2",
+          completedMarker: {
+            selector: ".completion_status.completed",
+            el: el({ tag: "SPAN", className: "completion_status completed" }),
+          },
+        }),
+      ],
     }),
-    makeModule({ id: "context_module_2", title: "Tuần 2", rows: [] }),
+    makeModule({ id: "context_module_2", title: "", rows: [] }), // shell -> dropped
+    makeModule({ id: "context_module_3", title: "Tuần 9", rows: [] }), // real empty -> kept
   ];
   crumbs = [el({ tag: "A", className: "crumb", text: "TOÁN 10" })];
   provider = buildProvider();
   CF.debug = true;
-  await provider.getCourses();
+
+  const mods = await provider.getModules("9");
+  assert.equal(mods.length, 2, "the empty-titled shell is not treated as a module");
 
   const classes = CF.debugReports.get("itemRowClasses");
-  assert.match(classes.matched, /context_module_item/, "dumps distinct row classes");
+  assert.match(classes.matched, /quiz×2/, "class shared by some rows reports its count");
+  assert.match(classes.matched, /page×1/, "class unique to one row is listed");
+  assert.doesNotMatch(classes.matched, /context_module_item/, "classes on ALL rows are excluded");
+
   const empty = CF.debugReports.get("modulesWithoutItems");
-  assert.match(empty.matched, /Tuần 2/, "names the module that produced no items");
+  assert.equal(empty.matched, JSON.stringify(["Tuần 9"]), "shell excluded, real empty module kept");
+
+  const scan = CF.debugReports.get("scan");
+  assert.match(scan.note, /skipped 1 empty container/, "shell skip is visible in the scan line");
 });
 
 test("getCompletion() maps every item id to its boolean", async () => {
