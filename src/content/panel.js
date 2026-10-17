@@ -39,7 +39,11 @@
     query: "",
     course: null,
     modules: [],
-    counts: { modules: 0, items: 0, weeks: 0 },
+    counts: { modules: 0, items: 0, weeks: 0, done: 0, pending: 0, unknown: 0 },
+    // Manual completion overrides for the current course: { [itemId]: true }.
+    manual: {},
+    // When true, hide items that are already complete (Canvas or manual).
+    incompleteOnly: false,
     onModulesPage: false,
   };
 
@@ -79,6 +83,9 @@
         <div class="cf-search-wrap">
           <input class="cf-search" type="search" />
         </div>
+        <div class="cf-filters">
+          <button class="cf-filter-toggle" type="button"></button>
+        </div>
         <div class="cf-body"></div>
         <div class="cf-foot">
           <span class="cf-brand">CanvasFocus</span>
@@ -98,6 +105,7 @@
       subtitle: root.querySelector(".cf-subtitle"),
       close: root.querySelector(".cf-close"),
       search: root.querySelector(".cf-search"),
+      filterToggle: root.querySelector(".cf-filter-toggle"),
       body: root.querySelector(".cf-body"),
       refresh: root.querySelector(".cf-refresh"),
       debugToggle: root.querySelector(".cf-debug-toggle"),
@@ -111,6 +119,12 @@
 
     // Restore persisted open state (default: collapsed).
     CF.storage.get(CF.KEYS.panelOpen, false).then((open) => setOpen(Boolean(open)));
+    // Restore the "only not-done" filter.
+    CF.storage.get(CF.KEYS.incompleteOnly, false).then((on) => {
+      state.incompleteOnly = Boolean(on);
+      applyStaticStrings();
+      renderList();
+    });
   }
 
   /**
@@ -137,6 +151,7 @@
     refs.close.addEventListener("click", () => setOpen(false));
     refs.refresh.addEventListener("click", () => refresh());
     refs.debugToggle.addEventListener("click", toggleDebug);
+    if (refs.filterToggle) refs.filterToggle.addEventListener("click", toggleIncompleteOnly);
 
     refs.search.addEventListener(
       "input",
@@ -169,6 +184,19 @@
     refs.refresh.textContent = t("refresh");
     refs.debugToggle.textContent = t("diagnostics");
     refs.debugToggle.title = t("diagnosticsOn");
+    if (refs.filterToggle) {
+      refs.filterToggle.textContent = t("filterIncomplete");
+      refs.filterToggle.setAttribute("aria-pressed", String(state.incompleteOnly));
+      refs.filterToggle.classList.toggle("cf-filter-toggle--on", state.incompleteOnly);
+    }
+  }
+
+  /** Toggle the "only not-done" filter and persist the choice. */
+  function toggleIncompleteOnly() {
+    state.incompleteOnly = !state.incompleteOnly;
+    applyStaticStrings();
+    renderList();
+    CF.storage.set(CF.KEYS.incompleteOnly, state.incompleteOnly);
   }
 
   function setOpen(open) {
@@ -208,13 +236,39 @@
       }
     }
 
+    // Manual overrides are per course, so load them once the course is known.
+    state.manual = course
+      ? await CF.storage.get(CF.itemState.storageKey(course.id), {})
+      : {};
+
     state.course = course;
     state.modules = modules;
-    state.counts = {
+    state.counts = computeCounts(modules);
+  }
+
+  /**
+   * Tally items by effective state. `done` includes manual overrides; `pending`
+   * means Canvas tracks a requirement that isn't met; `unknown` means Canvas
+   * exposes no signal at all.
+   */
+  function computeCounts(modules) {
+    const counts = {
       modules: modules.length,
-      items: modules.reduce((n, m) => n + m.items.length, 0),
+      items: 0,
       weeks: modules.reduce((n, m) => n + Math.max(1, m.weeks.length), 0),
+      done: 0,
+      pending: 0,
+      unknown: 0,
     };
+    for (const module of modules) {
+      for (const item of module.items) {
+        counts.items += 1;
+        const name = CF.itemState.resolve(item, state.manual);
+        if (CF.itemState.isDone(name)) counts.done += 1;
+        else counts[name] += 1; // "pending" | "unknown"
+      }
+    }
+    return counts;
   }
 
   /** Re-read the page and re-render (always a fresh scan — see loadData). */
@@ -276,6 +330,12 @@
     return hay.includes(state.query);
   }
 
+  /** When the "only not-done" filter is on, hide items that are already complete. */
+  function matchesFilter(entry) {
+    if (!state.incompleteOnly) return true;
+    return !CF.itemState.isDone(CF.itemState.resolve(entry.item, state.manual));
+  }
+
   // ---------------------------------------------------------------------------
   // Rendering
   // ---------------------------------------------------------------------------
@@ -293,11 +353,18 @@
     const subjectLabel = course && course.subjectKey
       ? CF.subjects.getSubjectLabel(course.subjectKey)
       : "";
-    const subtitle = [];
-    // Don't repeat the subject when the title already IS the subject.
-    if (!short && subjectLabel) subtitle.push(subjectLabel);
-    subtitle.push(countLabel(state.counts.items));
-    refs.subtitle.textContent = subtitle.filter(Boolean).join(" · ");
+
+    // Progress breakdown: how many items are done / pending / untracked. This is
+    // the point of the four-state model — "pending" (Canvas says not done) versus
+    // "unknown" (Canvas says nothing) are different, and both are visible here.
+    const { done, pending, unknown } = state.counts;
+    const parts = [];
+    if (done) parts.push(t("progressDone", { n: done }));
+    if (pending) parts.push(t("progressPending", { n: pending }));
+    if (unknown) parts.push(t("progressUnknown", { n: unknown }));
+    refs.subtitle.textContent = (parts.length ? parts : [subjectLabel, countLabel(state.counts.items)])
+      .filter(Boolean)
+      .join(" · ");
   }
 
   function countLabel(n) {
@@ -322,7 +389,7 @@
     let visibleTotal = 0;
 
     for (const group of groups) {
-      const visible = group.items.filter(matchesQuery);
+      const visible = group.items.filter(matchesQuery).filter(matchesFilter);
       if (!visible.length) continue;
       visibleTotal += visible.length;
 
@@ -339,7 +406,12 @@
     }
 
     if (visibleTotal === 0) {
-      refs.body.appendChild(emptyEl(t("emptySearch", { q: state.query })));
+      const message = state.query
+        ? t("emptySearch", { q: state.query })
+        : state.incompleteOnly
+          ? t("emptyAllDone")
+          : t("emptyNoItems");
+      refs.body.appendChild(emptyEl(message));
     }
   }
 
@@ -356,9 +428,17 @@
       return label;
     }
 
+    const stateName = CF.itemState.resolve(item, state.manual);
+    const done = CF.itemState.isDone(stateName);
+
+    // The marker lives BESIDE the reveal button (not inside it), so it can be its
+    // own click target without nesting interactive elements.
+    const row = document.createElement("div");
+    row.className = "cf-item-row";
+
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "cf-item" + (item.completed ? " cf-item--done" : "");
+    button.className = "cf-item" + (done ? " cf-item--done" : "");
     button.title = item.title;
 
     const icon = document.createElement("span");
@@ -387,17 +467,6 @@
       button.appendChild(badge);
     }
 
-    // Completion: we only ever assert a positive ✓. Canvas doesn't always expose
-    // completion state (teachers may not enable tracking), so the absence of a
-    // marker is NOT rendered as "not completed" — it's simply left blank.
-    if (item.completed) {
-      const check = document.createElement("span");
-      check.className = "cf-check";
-      check.textContent = "✓";
-      check.title = t("completed");
-      button.appendChild(check);
-    }
-
     button.addEventListener("click", () => {
       if (typeof provider.reveal === "function") {
         provider.reveal(item);
@@ -406,7 +475,61 @@
       }
     });
 
-    return button;
+    row.appendChild(button);
+    row.appendChild(renderMark(item, stateName));
+    return row;
+  }
+
+  /** i18n key + glyph per effective state. */
+  const MARK_META = {
+    done: { glyph: "✓", key: "markDone" },
+    "done-manual": { glyph: "✓", key: "markManual" },
+    pending: { glyph: "", key: "markPending" },
+    unknown: { glyph: "?", key: "markUnknown" },
+  };
+
+  /**
+   * Render the completion marker. A Canvas-confirmed ✓ is static; every other
+   * state is clickable to toggle a manual "done" (pending/unknown → done-manual,
+   * done-manual → back). Manual state is user-asserted and stored per course.
+   */
+  function renderMark(item, stateName) {
+    const info = MARK_META[stateName] || MARK_META.unknown;
+    const mark = document.createElement("span");
+    mark.className = `cf-mark cf-mark--${stateName}`;
+    mark.textContent = info.glyph;
+    mark.title = t(info.key);
+
+    // Canvas-confirmed completion can't be undone from here, so leave it inert.
+    if (stateName !== "done") {
+      mark.setAttribute("role", "button");
+      mark.tabIndex = 0;
+      mark.setAttribute("aria-label", mark.title);
+      const toggle = (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        toggleManual(item.id);
+      };
+      mark.addEventListener("click", toggle);
+      mark.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") toggle(event);
+      });
+    }
+    return mark;
+  }
+
+  /** Flip the manual-completion flag for one item and persist it for the course. */
+  function toggleManual(itemId) {
+    const course = state.course;
+    if (!course) return;
+    const next = { ...state.manual };
+    if (next[itemId]) delete next[itemId];
+    else next[itemId] = true;
+    state.manual = next;
+    state.counts = computeCounts(state.modules);
+    renderHeader();
+    renderList();
+    CF.storage.set(CF.itemState.storageKey(course.id), next);
   }
 
   function emptyEl(text) {
@@ -513,7 +636,8 @@
       if (host) host.style.display = "none";
       state.course = null;
       state.modules = [];
-      state.counts = { modules: 0, items: 0, weeks: 0 };
+      state.manual = {};
+      state.counts = { modules: 0, items: 0, weeks: 0, done: 0, pending: 0, unknown: 0 };
       return;
     }
 

@@ -122,6 +122,61 @@
 
     .cf-body { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
 
+    .cf-filters {
+      display: flex;
+      gap: 8px;
+      padding: 0 14px 10px;
+    }
+    .cf-filter-toggle {
+      border: 1px solid var(--cf-border);
+      border-radius: 999px;
+      background: var(--cf-bg-card);
+      color: var(--cf-muted);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .cf-filter-toggle:hover { background: var(--cf-bg-input); color: var(--cf-text); }
+    .cf-filter-toggle--on {
+      background: var(--cf-accent-soft);
+      border-color: var(--cf-accent);
+      color: #c6ddff;
+    }
+
+    /* One row = the reveal button + the completion marker beside it, so the
+       marker can be its own click target without nesting inside the button. */
+    .cf-item-row { display: flex; align-items: center; gap: 2px; }
+    .cf-item-row .cf-item { flex: 1; min-width: 0; }
+
+    .cf-mark {
+      flex: none;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .cf-mark[role="button"] { cursor: pointer; }
+    .cf-mark[role="button"]:hover { background: var(--cf-bg-card); }
+    /* Keep the manual mark's accent tint on hover (don't let the generic hover win). */
+    .cf-mark--done-manual[role="button"]:hover { background: var(--cf-accent-soft); }
+    .cf-mark[role="button"]:focus-visible { outline: 2px solid var(--cf-accent); outline-offset: 1px; }
+    .cf-mark--done { color: var(--cf-done); font-weight: 700; }
+    .cf-mark--done-manual {
+      color: #c6ddff;
+      font-weight: 700;
+      background: var(--cf-accent-soft);
+      border: 1px solid var(--cf-accent);
+    }
+    .cf-mark--pending { border: 1.5px solid var(--cf-muted); }
+    .cf-mark--unknown {
+      border: 1.5px dashed var(--cf-muted);
+      color: var(--cf-muted);
+      font-weight: 700;
+    }
+
     .cf-group { margin: 10px 0 4px; }
     .cf-group-title {
       position: sticky;
@@ -180,7 +235,6 @@
       text-transform: uppercase;
     }
     .cf-item--subheader:hover { background: none; border-color: transparent; }
-    .cf-check { flex: none; width: 16px; text-align: center; color: var(--cf-done); font-size: 12px; }
 
     .cf-empty { padding: 26px 16px; text-align: center; color: var(--cf-muted); font-size: 13px; }
 

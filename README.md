@@ -45,17 +45,23 @@ open the panel, search, and jump to items.
 - Items are **grouped by week**, parsed from module titles (`Tuần 1-3`, `Week 5 & 7`,
   …). Modules with no week info land in **Other**.
 - Click an item to **scroll to and expand** the real Canvas module row.
-- A **✓** appears only when completion is *confirmed*. Canvas does not always
-  expose completion state — a teacher may not enable tracking, and Canvas's
-  `<span class="completion_requirement">` is a requirement *description*, not
-  state. So CanvasFocus never guesses: no marker means no ✓ (never a "not
-  completed" claim). See `readCompleted()` in `src/providers/dom.js`.
-  - Verified on a live Vinschool course (104 items): the **only** class Canvas uses
-    to assert completion is `completed_item` (x2, matching its own "Đã gửi /
-    hoàn thành" rows). Classes like `must_submit_requirement`,
-    `must_view_requirement`, `progression_requirement` and `_requirement` describe
-    what an item *requires*, not whether it's done — see
-    `ITEM_REQUIREMENT_CLASSES` in `src/canvas/selectors.js`.
+- Each item shows a **completion marker** with four possible states:
+  - **✓** — Canvas confirms it's done (`completed_item`). Static.
+  - **○** — *pending*: Canvas tracks a requirement here and it isn't met yet.
+  - **?** — *unknown*: Canvas exposes no tracking for this item (the teacher
+    didn't enable it), so CanvasFocus can't know.
+  - **✓ (blue)** — *manually* marked done by you.
+- **Click ○ / ? / blue ✓** to toggle your own "done" mark for that item. Manual
+  marks are yours alone and are stored per course. This is how you handle items
+  Canvas can't track — the marker is user-asserted, never presented as Canvas truth.
+- **Only not-done** filters the list down to items that aren't complete yet
+  (manual marks count as complete, so they disappear too).
+- The header shows a **progress breakdown** — e.g. `2 done · 95 pending · 7
+  untracked` — which is exactly the pending-vs-untracked distinction above.
+- Canvas's *requirement* classes (`_requirement`, `must_submit_requirement`,
+  `must_view_requirement`, `progression_requirement`) describe **what** an item
+  requires, never whether it's done. They're listed in `ITEM_REQUIREMENT_CLASSES`
+  (`src/canvas/selectors.js`) purely so they can't be mistaken for state.
 - The **Diagnostics** button (or `?debug` in the URL) shows which DOM selectors
   matched — your first stop when Canvas changes.
 - The **CF** popup toggles the extension on/off, switches EN/VI, and toggles
@@ -159,6 +165,7 @@ src/
     session.js             B2: same-origin fetch (NOT loaded yet)
   content/
     route.js               SPA pushState + MutationObserver -> route/content events
+    item-state.js          done/pending/unknown resolution (pure, DOM-free)
     panel.css.js           panel styles as a string (injected into the ShadowRoot)
     panel.js               the Shadow-DOM sidebar UI
     bootstrap.js           entry: settings -> mount + observe
@@ -175,9 +182,14 @@ The UI only ever talks to the **provider contract** (`providers/index.js`):
 ```js
 getCourses()                  // [{ id, name, shortName?, subjectKey? }]
 getModules(courseId)          // [{ id, title, weeks }]
-getItems(courseId, moduleId)  // [{ id, title, type, url, completed, element? }]
+getItems(courseId, moduleId)  // [{ id, title, type, url, completed, tracked, element? }]
 getCompletion(courseId)       // { [itemId]: boolean }
 ```
+
+`completed` = Canvas confirms the item is done; `tracked` = Canvas defines a
+requirement for it. The panel maps these to **done / pending / unknown** (see
+`src/content/item-state.js`), so a provider that knows completion for every item
+should set `tracked: true` to avoid showing "unknown".
 
 B1 implements it by reading the DOM (`providers/dom.js`). B2 will implement the
 same four methods with same-origin `fetch` + the user's session cookie

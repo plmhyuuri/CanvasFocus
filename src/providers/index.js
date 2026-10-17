@@ -12,8 +12,13 @@
  *
  *   getCourses()                  -> [{ id, name, shortName?, subjectKey? }]
  *   getModules(courseId)          -> [{ id, title, weeks: number[] }]
- *   getItems(courseId, moduleId)  -> [{ id, title, type, url, completed, element? }]
+ *   getItems(courseId, moduleId)  -> [{ id, title, type, url, completed, tracked, element? }]
  *   getCompletion(courseId)       -> { [itemId]: boolean }
+ *
+ * `completed` = Canvas confirms the item is done. `tracked` = Canvas defines a
+ * requirement for it (so "not completed" means genuinely pending, not untracked).
+ * Providers that know completion for every item should set `tracked: true`.
+ * Together they drive the panel's done / pending / unknown states.
  *
  * Extra (non-contract) helper that the panel uses when present:
  *   reveal(item)                  -> void   // scroll/expand the real Canvas item

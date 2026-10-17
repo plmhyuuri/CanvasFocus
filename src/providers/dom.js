@@ -108,43 +108,53 @@
    * item is NOT complete — so it must never be read as state. And when a teacher
    * doesn't enable completion tracking, no reliable signal exists at all.
    *
-   * We therefore return true ONLY on an explicit, positive marker and otherwise
-   * report false ("not confirmed"), never guessing from free text. The panel shows
-   * a ✓ only for true and renders nothing for false, so a missing tracker can't be
-   * misrepresented as "completed".
+   * We therefore return `completed: true` ONLY on an explicit, positive marker.
+   * Separately, `tracked` reports whether Canvas defines a REQUIREMENT for this
+   * row (via `ITEM_REQUIREMENT_CLASSES`). Together they let the panel tell
+   * "Canvas is tracking this and it isn't done" (pending) apart from "Canvas
+   * exposes nothing" (unknown) — instead of an ambiguous blank.
    *
    * @param {Element} row
-   * @returns {boolean}
+   * @returns {{ completed: boolean, tracked: boolean }}
    */
-  function readCompleted(row) {
+  function readCompletion(row) {
+    let completed = false;
+
     // 1. Canvas adds `completed_item` to the row itself when the item is complete.
     if (row.classList.contains("completed_item")) {
       CF.debugReport("completedVia", { ok: true, matched: "row class completed_item" });
-      return true;
+      completed = true;
+    } else {
+      // 2. An explicit completion marker element (see selectors.itemCompletedMarker).
+      const marker = pick(row, CF.selectors.SELECTORS.itemCompletedMarker, "itemCompletedMarker");
+      if (marker) {
+        const classes = marker.classList;
+        if (classes.contains("completed") || classes.contains("completed_item")) {
+          CF.debugReport("completedVia", { ok: true, matched: `marker class ${marker.className}` });
+          completed = true;
+        } else {
+          const label = (
+            marker.getAttribute("aria-label") ||
+            marker.getAttribute("title") ||
+            ""
+          ).toLowerCase();
+          // Anchored: only an explicit "completed" affordance, never a requirement blurb.
+          if (/\b(completed|complete|done|hoàn thành)\b/.test(label) && !/must|requirement/.test(label)) {
+            CF.debugReport("completedVia", { ok: true, matched: `marker label "${label}"` });
+            completed = true;
+          }
+        }
+      }
+      if (!completed) CF.debugReport("completedVia", { ok: false });
     }
 
-    // 2. An explicit completion marker element (see selectors.itemCompletedMarker).
-    const marker = pick(row, CF.selectors.SELECTORS.itemCompletedMarker, "itemCompletedMarker");
-    if (marker) {
-      const classes = marker.classList;
-      if (classes.contains("completed") || classes.contains("completed_item")) {
-        CF.debugReport("completedVia", { ok: true, matched: `marker class ${marker.className}` });
-        return true;
-      }
-      const label = (
-        marker.getAttribute("aria-label") ||
-        marker.getAttribute("title") ||
-        ""
-      ).toLowerCase();
-      // Anchored: only an explicit "completed" affordance, never a requirement blurb.
-      if (/\b(completed|complete|done|hoàn thành)\b/.test(label) && !/must|requirement/.test(label)) {
-        CF.debugReport("completedVia", { ok: true, matched: `marker label "${label}"` });
-        return true;
-      }
-    }
+    // Canvas tracks this item iff it carries a requirement class. These describe
+    // what is REQUIRED, not whether it's met — so they never imply "completed".
+    const tracked = CF.selectors.ITEM_REQUIREMENT_CLASSES.some((cls) =>
+      row.classList.contains(cls)
+    );
 
-    CF.debugReport("completedVia", { ok: false });
-    return false;
+    return { completed, tracked };
   }
 
   /** Parse one `li.context_module_item` into a contract item. */
@@ -153,13 +163,16 @@
     const linkEl = pick(row, CF.selectors.SELECTORS.itemLink, "itemLink");
     const title = ((titleEl || row).textContent || "").trim() || CF.i18n.t("typeUnknown");
     const type = readItemType(row);
+    const { completed, tracked } = readCompletion(row);
 
     return {
       id: row.id || `${moduleId}:${index}`,
       title,
       type,
       url: linkEl ? linkEl.href : null,
-      completed: readCompleted(row),
+      completed,
+      // Whether Canvas defines a requirement here (distinguishes pending/unknown).
+      tracked,
       moduleId,
       // Live DOM reference: lets the panel reveal the real row on click (B1 only).
       element: row,
@@ -248,13 +261,15 @@
 
     const items = modules.flatMap((m) => m.items);
     const completed = items.filter((it) => it.completed).length;
+    const tracked = items.filter((it) => it.tracked).length;
     CF.debugReport("scan", {
       ok: modules.length > 0,
       matched:
         `${modules.length} modules, ${items.length} items · ` +
         `course: ${courseName ? JSON.stringify(courseName) : "(empty)"}`,
       note:
-        `completion: ${completed}/${items.length} confirmed` +
+        `completion: ${completed}/${items.length} confirmed · ` +
+        `tracked: ${tracked}/${items.length}` +
         (droppedShells ? ` · skipped ${droppedShells} empty container(s)` : ""),
     });
 

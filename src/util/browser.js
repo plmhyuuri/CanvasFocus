@@ -92,6 +92,7 @@
     language: "language",
     debug: "debug",
     panelOpen: "panelOpen",
+    incompleteOnly: "incompleteOnly",
   };
 
   // ---------------------------------------------------------------------------

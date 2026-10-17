@@ -54,7 +54,7 @@ function el(opts = {}) {
 }
 
 /** A module row factory; `completed` flags drive expected output. */
-function makeRow({ id, type, title, completedMarker, hasRequirement }) {
+function makeRow({ id, type, title, completedMarker, hasRequirement, tracked }) {
   const children = {
     ".item_name .ig-title": el({ tag: "A", className: "ig-title", text: title }),
     ".item_name a": el({ tag: "A", className: "ig-title", href: `/courses/9/${id}` }),
@@ -68,7 +68,14 @@ function makeRow({ id, type, title, completedMarker, hasRequirement }) {
       text: "Must view the page",
     });
   }
-  return el({ tag: "LI", id, className: `context_module_item ${type}`, children });
+  // `tracked` adds a Canvas requirement class (see ITEM_REQUIREMENT_CLASSES).
+  const requirement = tracked ? ` ${tracked}` : "";
+  return el({
+    tag: "LI",
+    id,
+    className: `context_module_item ${type}${requirement}`,
+    children,
+  });
 }
 
 function makeModule({ id, title, rows }) {
@@ -258,6 +265,46 @@ test("reports distinguishing row/parent classes and drops empty-titled shells", 
 
   const scan = CF.debugReports.get("scan");
   assert.match(scan.note, /skipped 1 empty container/, "shell skip is visible in the scan line");
+});
+
+test("exposes `tracked` from Canvas requirement classes (pending vs unknown)", async () => {
+  modules = [
+    makeModule({
+      id: "context_module_1",
+      title: "Tuần 1",
+      rows: [
+        // tracked via the generic requirement class, not completed
+        makeRow({ id: "a", type: "page", title: "P", tracked: "_requirement" }),
+        // tracked via a specific requirement type
+        makeRow({ id: "b", type: "quiz", title: "Q", tracked: "must_submit_requirement" }),
+        // no requirement class at all -> untracked (Canvas exposes nothing)
+        makeRow({ id: "c", type: "file", title: "F" }),
+        // tracked AND completed
+        el({
+          tag: "LI",
+          id: "d",
+          className: "context_module_item quiz completed_item _requirement",
+          children: {
+            ".item_name .ig-title": el({ tag: "A", className: "ig-title", text: "Q2" }),
+            ".item_name a": el({ tag: "A", className: "ig-title", href: "/d" }),
+          },
+        }),
+      ],
+    }),
+  ];
+  crumbs = [el({ tag: "A", className: "crumb", text: "TOÁN 10" })];
+  provider = buildProvider();
+  const items = await provider.getItems("9", "1");
+  assert.deepEqual(
+    items.map((i) => i.tracked),
+    [true, true, false, true],
+    "requirement classes mark an item as tracked"
+  );
+  assert.deepEqual(
+    items.map((i) => i.completed),
+    [false, false, false, true],
+    "requirement classes are NOT completion — only the completed_item row is done"
+  );
 });
 
 test("getCompletion() maps every item id to its boolean", async () => {

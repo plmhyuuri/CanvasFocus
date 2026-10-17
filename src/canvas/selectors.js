@@ -81,7 +81,7 @@
      * requirement DESCRIPTION (e.g. "Must view the page") and it exists even when
      * the item is NOT complete — reading it as state produces false positives.
      * Completion is asserted only from explicit markers below, plus the row-level
-     * `completed_item` class handled in providers/dom.js readCompleted().
+     * `completed_item` class handled in providers/dom.js readCompletion().
      *
      * When a teacher has not enabled completion tracking, NONE of these appear and
      * we correctly report "not confirmed" rather than guessing.

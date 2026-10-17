@@ -17,6 +17,7 @@
         "src/providers/index.js",
         "src/providers/dom.js",
         "src/content/route.js",
+        "src/content/item-state.js",
         "src/content/panel.css.js",
         "src/content/panel.js",
         "src/content/bootstrap.js"

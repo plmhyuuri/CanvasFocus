@@ -29,6 +29,7 @@
     // Empty states
     emptyNoItems: "Không tìm thấy mục nào trên trang này.",
     emptySearch: "Không có kết quả cho “{q}”.",
+    emptyAllDone: "Không còn mục nào cần làm. 🎉",
     emptyNotModules: "Hãy mở trang Học phần của một khoá học để dùng CanvasFocus.",
 
     // Item types
@@ -43,7 +44,14 @@
     typeUnknown: "Mục",
 
     // Completion
-    completed: "Đã hoàn thành",
+    markDone: "Đã hoàn thành (Canvas)",
+    markManual: "Bạn đã đánh dấu hoàn thành — nhấn để bỏ",
+    markPending: "Chưa hoàn thành — Canvas đang theo dõi mục này",
+    markUnknown: "Không theo dõi tiến độ — nhấn để tự đánh dấu đã xong",
+    filterIncomplete: "Chỉ mục chưa xong",
+    progressDone: "{n} đã xong",
+    progressPending: "{n} chưa xong",
+    progressUnknown: "{n} chưa rõ",
 
     // Diagnostics overlay
     debugHint: "Nếu một mục báo “MISS”, hãy sửa trong src/canvas/selectors.js.",

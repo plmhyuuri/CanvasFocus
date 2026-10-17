@@ -32,6 +32,7 @@
     // Empty states
     emptyNoItems: "No module items found on this page.",
     emptySearch: "No matches for “{q}”.",
+    emptyAllDone: "Nothing left to do here. 🎉",
     emptyNotModules: "Open a course Modules page to use CanvasFocus.",
 
     // Item types
@@ -46,7 +47,14 @@
     typeUnknown: "Item",
 
     // Completion
-    completed: "Completed",
+    markDone: "Completed (Canvas)",
+    markManual: "Marked done by you — click to undo",
+    markPending: "Not done yet — Canvas is tracking this item",
+    markUnknown: "No completion tracking — click to mark it done yourself",
+    filterIncomplete: "Only not-done",
+    progressDone: "{n} done",
+    progressPending: "{n} pending",
+    progressUnknown: "{n} untracked",
 
     // Diagnostics overlay
     debugHint: "If a field shows “MISS”, update it in src/canvas/selectors.js.",
