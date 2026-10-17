@@ -1,0 +1,183 @@
+/**
+ * DOM provider tests — no jsdom required.
+ *
+ * providers/dom.js only ever reads its content through `querySelector`/
+ * `querySelectorAll`, so a fake element tree exercises the real parsing logic
+ * (types, completion semantics, course-name resolution) without a DOM engine.
+ *
+ * The completion tests matter most: they pin the rule that a
+ * `<span class="completion_requirement">` (a requirement DESCRIPTION) must NOT be
+ * read as completed state, because teachers don't always enable tracking.
+ */
+"use strict";
+
+const { test, beforeEach } = require("node:test");
+const assert = require("node:assert/strict");
+const { resetNamespace, load } = require("./_harness");
+
+/** Minimal fake element supporting the API surface pick()/dom.js use. */
+function el(opts = {}) {
+  const {
+    tag = "DIV",
+    className = "",
+    id = "",
+    text = "",
+    href = null,
+    attrs = {},
+    children = {},
+  } = opts;
+  const classes = className.split(/\s+/).filter(Boolean);
+  return {
+    tagName: tag,
+    className,
+    id,
+    textContent: text,
+    href,
+    classList: { contains: (c) => classes.includes(c) },
+    getAttribute: (name) => (name in attrs ? attrs[name] : null),
+    querySelector: (sel) => children[sel] || null,
+    querySelectorAll: (sel) => children[sel] || [],
+    closest: () => null,
+  };
+}
+
+/** A module row factory; `completed` flags drive expected output. */
+function makeRow({ id, type, title, completedMarker, hasRequirement }) {
+  const children = {
+    ".item_name .ig-title": el({ tag: "A", className: "ig-title", text: title }),
+    ".item_name a": el({ tag: "A", className: "ig-title", href: `/courses/9/${id}` }),
+  };
+  if (completedMarker) children[completedMarker.selector] = completedMarker.el;
+  if (hasRequirement) {
+    // Present on incomplete items too — must be ignored as a state signal.
+    children[".completion_requirement"] = el({
+      tag: "SPAN",
+      className: "completion_requirement",
+      text: "Must view the page",
+    });
+  }
+  return el({ tag: "LI", id, className: `context_module_item ${type}`, children });
+}
+
+function makeModule({ id, title, rows }) {
+  return el({
+    tag: "DIV",
+    id,
+    className: "context_module",
+    children: {
+      ".ig-header-title": el({ tag: "H2", className: "ig-header-title", text: title }),
+      "li.context_module_item": rows,
+      ".context_module_item": rows,
+    },
+  });
+}
+
+let CF;
+let provider;
+let modules;
+let crumbs;
+
+function installGlobals() {
+  const doc = {
+    title: "Modules: FALLBACK COURSE",
+    querySelector: (sel) =>
+      ({ ".context_module": modules, ".ic-app-crumbs a": crumbs }[sel] || null),
+    querySelectorAll: (sel) =>
+      ({ ".context_module": modules, ".ic-app-crumbs a": crumbs }[sel] || []),
+  };
+  globalThis.document = doc;
+  globalThis.location = { href: "https://lms.vinschool.edu.vn/courses/9/modules" };
+}
+
+beforeEach(() => {
+  CF = resetNamespace();
+  CF.debug = false;
+  load("util/browser.js");
+  load("i18n/en.js");
+  load("i18n/index.js");
+  load("canvas/selectors.js");
+  load("canvas/weeks.js");
+  load("canvas/subjects.js");
+  load("providers/index.js");
+});
+
+function buildProvider() {
+  installGlobals();
+  // dom.js registers itself on the namespace when loaded.
+  load("providers/dom.js");
+  return CF.providers.select("dom");
+}
+
+test("parses modules, weeks, item types and completion conservatively", async () => {
+  modules = [
+    makeModule({
+      id: "context_module_111",
+      title: "Chương 1 - Tuần 1-2",
+      rows: [
+        // completed via the row-level class
+        el({
+          tag: "LI",
+          id: "a",
+          className: "context_module_item assignment completed_item",
+          children: {
+            ".item_name .ig-title": el({ tag: "A", className: "ig-title", text: "Bài tập 1" }),
+            ".item_name a": el({ tag: "A", className: "ig-title", href: "/1" }),
+          },
+        }),
+        // INCOMPLETE, but has a completion_requirement description -> must be false
+        makeRow({ id: "b", type: "page", title: "Bài đọc", hasRequirement: true }),
+        // completed via an explicit marker element
+        makeRow({
+          id: "c",
+          type: "quiz",
+          title: "Kiểm tra",
+          completedMarker: {
+            selector: ".completion_status.completed",
+            el: el({ tag: "SPAN", className: "completion_status completed" }),
+          },
+        }),
+      ],
+    }),
+  ];
+  crumbs = [el({ tag: "A", className: "crumb" }), el({ tag: "A", className: "crumb", text: "TOÁN 10" })];
+
+  provider = buildProvider();
+  const [course] = await provider.getCourses();
+  assert.equal(course.id, "9");
+  assert.equal(course.name, "TOÁN 10", "uses the last crumb WITH text (skips icon-only)");
+
+  const mods = await provider.getModules("9");
+  assert.equal(mods.length, 1);
+  assert.deepEqual(mods[0].weeks, [1, 2]);
+
+  const items = await provider.getItems("9", "111");
+  assert.deepEqual(
+    items.map((i) => i.completed),
+    [true, false, true],
+    "row class ✓, requirement-only ✗, explicit marker ✓"
+  );
+  assert.deepEqual(items.map((i) => i.type), ["assignment", "page", "quiz"]);
+  assert.deepEqual(items.map((i) => i.title), ["Bài tập 1", "Bài đọc", "Kiểm tra"]);
+});
+
+test("falls back to document.title (part after the first colon) when no crumbs", async () => {
+  modules = [makeModule({ id: "context_module_1", title: "Tuần 3", rows: [] })];
+  crumbs = [];
+  provider = buildProvider();
+  const [course] = await provider.getCourses();
+  assert.equal(course.name, "FALLBACK COURSE");
+});
+
+test("getCompletion() maps every item id to its boolean", async () => {
+  modules = [
+    makeModule({
+      id: "context_module_222",
+      title: "Ôn tập",
+      rows: [makeRow({ id: "x", type: "page", title: "P", hasRequirement: true })],
+    }),
+  ];
+  crumbs = [];
+  provider = buildProvider();
+  const completion = await provider.getCompletion("9");
+  assert.deepEqual(completion, { x: false });
+});

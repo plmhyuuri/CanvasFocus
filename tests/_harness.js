@@ -32,9 +32,18 @@ function resetNamespace() {
   return globalThis.__canvasFocus;
 }
 
-/** Load an extension source file (relative to src/) into the global namespace. */
+/**
+ * Load an extension source file (relative to src/) into the global namespace.
+ *
+ * Re-executes the file every time (require cache is busted) so tests that reset
+ * the namespace in `beforeEach` get a clean registration — the files are plain
+ * scripts, not modules, so re-running them is exactly what the browser does on
+ * reload.
+ */
 function load(relativePath) {
-  require(path.join(SRC, relativePath));
+  const full = require.resolve(path.join(SRC, relativePath));
+  delete require.cache[full];
+  require(full);
 }
 
 module.exports = { SRC, resetNamespace, load };

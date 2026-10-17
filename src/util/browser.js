@@ -104,7 +104,7 @@
   CF.debug = false;
 
   /**
-   * Aggregated diagnostics, keyed by field label (e.g. "itemCompletion").
+   * Aggregated diagnostics, keyed by field label (e.g. "itemTitle").
    *
    * Aggregated rather than appended because `pick()` runs once per module item:
    * a 100-item course would otherwise emit 100 lines per field and make the

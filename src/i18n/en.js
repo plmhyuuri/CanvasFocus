@@ -47,7 +47,6 @@
 
     // Completion
     completed: "Completed",
-    notCompleted: "Not completed",
 
     // Diagnostics overlay
     debugHint: "If a field shows “MISS”, update it in src/canvas/selectors.js.",

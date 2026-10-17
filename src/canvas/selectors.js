@@ -43,12 +43,12 @@
     /** Course title, shown in the panel header. Falls back to document.title. */
     courseName: [
       ".ic-app-crumbs a",
-      ".ic-app-crumbs li a",
+      ".ic-app-crumbs",
+      ".course-title",
+      "[data-testid='course-name']",
       "#breadcrumbs li a",
       ".ellipsible",
-      ".ic-app-header__main-navigation .ellipsible",
       "h1.page-title",
-      "[data-testid='course-name']",
     ],
 
     /** One container element per Canvas module. */
@@ -75,19 +75,24 @@
     itemLink: [".item_name a", "a.ig-title", "a"],
 
     /**
-     * Completion indicator on an item.
+     * Elements that positively INDICATE completion on an item row.
      *
-     * NOTE: on many student Modules pages Canvas renders NOTHING here unless the
-     * course's modules define completion requirements — a MISS on every item is
-     * normal and harmless (the row-level `completed_item` check in
-     * providers/dom.js readCompleted() still catches completion).
+     * DO NOT add `.completion_requirement` here. Canvas renders that span as the
+     * requirement DESCRIPTION (e.g. "Must view the page") and it exists even when
+     * the item is NOT complete — reading it as state produces false positives.
+     * Completion is asserted only from explicit markers below, plus the row-level
+     * `completed_item` class handled in providers/dom.js readCompleted().
+     *
+     * When a teacher has not enabled completion tracking, NONE of these appear and
+     * we correctly report "not confirmed" rather than guessing.
      */
-    itemCompletion: [
-      ".completion_status",
+    itemCompletedMarker: [
       ".completed_item",
-      ".completion_indicator",
-      "[class*='completion']",
-      ".module-item-status",
+      ".completion_status.completed",
+      ".completion_indicator.completed",
+      ".completion_requirement.completed",
+      "[aria-label*='Completed']",
+      "[aria-label*='Hoàn thành']",
       ".icon-check",
     ],
   };

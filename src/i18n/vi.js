@@ -44,7 +44,6 @@
 
     // Completion
     completed: "Đã hoàn thành",
-    notCompleted: "Chưa hoàn thành",
 
     // Diagnostics overlay
     debugHint: "Nếu một mục báo “MISS”, hãy sửa trong src/canvas/selectors.js.",

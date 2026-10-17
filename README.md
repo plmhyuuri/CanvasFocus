@@ -41,6 +41,11 @@ open the panel, search, and jump to items.
 - Items are **grouped by week**, parsed from module titles (`Tuần 1-3`, `Week 5 & 7`,
   …). Modules with no week info land in **Other**.
 - Click an item to **scroll to and expand** the real Canvas module row.
+- A **✓** appears only when completion is *confirmed*. Canvas does not always
+  expose completion state — a teacher may not enable tracking, and Canvas's
+  `<span class="completion_requirement">` is a requirement *description*, not
+  state. So CanvasFocus never guesses: no marker means no ✓ (never a "not
+  completed" claim). See `readCompleted()` in `src/providers/dom.js`.
 - The **Diagnostics** button (or `?debug` in the URL) shows which DOM selectors
   matched — your first stop when Canvas changes.
 - The **CF** popup toggles the extension on/off, switches EN/VI, and toggles

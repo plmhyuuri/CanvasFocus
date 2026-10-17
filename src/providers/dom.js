@@ -20,12 +20,29 @@
     return document;
   }
 
-  /** Read the course name from the page header/breadcrumb, falling back to title. */
+  /**
+   * Read the course name.
+   *
+   * Two sources, because Canvas crumb lists often begin with an icon-only link:
+   *   1. A crumb/link that actually carries visible text (scan from the END — the
+   *      deepest crumb is closest to the course name).
+   *   2. `document.title`, which Canvas sets as "<Page Title>: <Course Name>",
+   *      so the course is everything AFTER the first colon.
+   * Keep the resolved value in the scan diagnostic so a wrong guess is visible.
+   */
   function readCourseName() {
-    const el = pick(getCourseElement(), CF.selectors.SELECTORS.courseName, "courseName");
-    if (el && el.textContent.trim()) return el.textContent.trim();
-    // document.title is typically "Course Name: Modules" — strip the suffix.
-    return (document.title || "").split(":")[0].trim() || document.title;
+    const crumbs = pickAll(getCourseElement(), CF.selectors.SELECTORS.courseName, "courseName");
+    for (let i = crumbs.length - 1; i >= 0; i -= 1) {
+      const text = (crumbs[i].textContent || "").trim();
+      if (text) return text;
+    }
+
+    const title = (document.title || "").trim();
+    if (title.includes(":")) {
+      const after = title.split(":").slice(1).join(":").trim();
+      if (after) return after;
+    }
+    return title;
   }
 
   /** Detect the Canvas item type from the row's classes. */
@@ -37,27 +54,50 @@
   }
 
   /**
-   * Read completion state. Canvas signals this in two places, in priority order:
-   *   1. `completed_item` class on the row itself (most common; the indicator
-   *      element often isn't rendered at all until completion requirements exist)
-   *   2. a completion indicator child element
-   * Must NOT return early on a missing indicator, or (1) becomes unreachable.
+   * Read completion state — CONSERVATIVELY.
+   *
+   * Canvas is unreliable here: a module item's `<span class="completion_requirement">`
+   * is the *requirement description* ("Must view the page"), present even when the
+   * item is NOT complete — so it must never be read as state. And when a teacher
+   * doesn't enable completion tracking, no reliable signal exists at all.
+   *
+   * We therefore return true ONLY on an explicit, positive marker and otherwise
+   * report false ("not confirmed"), never guessing from free text. The panel shows
+   * a ✓ only for true and renders nothing for false, so a missing tracker can't be
+   * misrepresented as "completed".
+   *
+   * @param {Element} row
+   * @returns {boolean}
    */
   function readCompleted(row) {
-    if (row.classList.contains("completed_item")) return true;
-
-    const indicator = pick(row, CF.selectors.SELECTORS.itemCompletion, "itemCompletion");
-    if (!indicator) return false;
-
-    if (
-      indicator.classList.contains("completed") ||
-      indicator.classList.contains("completed_item")
-    ) {
+    // 1. Canvas adds `completed_item` to the row itself when the item is complete.
+    if (row.classList.contains("completed_item")) {
+      CF.debugReport("completedVia", { ok: true, matched: "row class completed_item" });
       return true;
     }
-    // Canvas renders a checkmark / "completed" icon; sniff its label as a last resort.
-    const label = (indicator.getAttribute("title") || indicator.textContent || "").toLowerCase();
-    return /complete|done|hoàn thành/.test(label);
+
+    // 2. An explicit completion marker element (see selectors.itemCompletedMarker).
+    const marker = pick(row, CF.selectors.SELECTORS.itemCompletedMarker, "itemCompletedMarker");
+    if (marker) {
+      const classes = marker.classList;
+      if (classes.contains("completed") || classes.contains("completed_item")) {
+        CF.debugReport("completedVia", { ok: true, matched: `marker class ${marker.className}` });
+        return true;
+      }
+      const label = (
+        marker.getAttribute("aria-label") ||
+        marker.getAttribute("title") ||
+        ""
+      ).toLowerCase();
+      // Anchored: only an explicit "completed" affordance, never a requirement blurb.
+      if (/\b(completed|complete|done|hoàn thành)\b/.test(label) && !/must|requirement/.test(label)) {
+        CF.debugReport("completedVia", { ok: true, matched: `marker label "${label}"` });
+        return true;
+      }
+    }
+
+    CF.debugReport("completedVia", { ok: false });
+    return false;
   }
 
   /** Parse one `li.context_module_item` into a contract item. */
@@ -108,10 +148,17 @@
       };
     });
 
-    cache = { courseId, courseName: readCourseName(), modules };
+    const courseName = readCourseName();
+    cache = { courseId, courseName, modules };
+
+    const items = modules.flatMap((m) => m.items);
+    const completed = items.filter((it) => it.completed).length;
     CF.debugReport("scan", {
       ok: modules.length > 0,
-      matched: `${modules.length} modules, ${modules.reduce((n, m) => n + m.items.length, 0)} items`,
+      matched:
+        `${modules.length} modules, ${items.length} items · ` +
+        `course: ${courseName ? JSON.stringify(courseName) : "(empty)"}`,
+      note: `completion: ${completed}/${items.length} confirmed`,
     });
     return cache;
   }

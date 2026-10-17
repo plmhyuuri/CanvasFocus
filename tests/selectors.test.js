@@ -44,9 +44,9 @@ test("pick() returns the first matching selector and records no fallback note", 
 test("pick() reports the element when a FALLBACK selector matches", () => {
   CF.resetDebugReports();
   const root = fakeRoot({ ".b": el("DIV", "completion_status completed") });
-  const found = pick(root, [".a", ".b"], "itemCompletion");
+  const found = pick(root, [".a", ".b"], "itemCompletedMarker");
   assert.equal(found.className, "completion_status completed");
-  const report = CF.debugReports.get("itemCompletion");
+  const report = CF.debugReports.get("itemCompletedMarker");
   assert.equal(report.matched, ".b");
   assert.match(report.note, /fallback #2/);
   assert.match(report.note, /div\.completion_status\.completed/);

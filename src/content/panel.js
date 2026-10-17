@@ -283,10 +283,12 @@
   function renderHeader() {
     if (!refs.title) return;
     const course = state.course;
+    const name = course && course.name && course.name.trim();
     const subjectLabel = course && course.subjectKey
       ? CF.subjects.getSubjectLabel(course.subjectKey)
       : "";
-    refs.title.textContent = course ? course.name || t("panelTitle") : t("panelTitle");
+    // Never render a blank title: fall back to the generic panel label.
+    refs.title.textContent = name || t("panelTitle");
     refs.subtitle.textContent = [subjectLabel, countLabel(state.counts.items)]
       .filter(Boolean)
       .join(" · ");
@@ -379,11 +381,16 @@
       button.appendChild(badge);
     }
 
-    const check = document.createElement("span");
-    check.className = "cf-check";
-    check.textContent = item.completed ? "✓" : "";
-    check.title = item.completed ? t("completed") : t("notCompleted");
-    button.appendChild(check);
+    // Completion: we only ever assert a positive ✓. Canvas doesn't always expose
+    // completion state (teachers may not enable tracking), so the absence of a
+    // marker is NOT rendered as "not completed" — it's simply left blank.
+    if (item.completed) {
+      const check = document.createElement("span");
+      check.className = "cf-check";
+      check.textContent = "✓";
+      check.title = t("completed");
+      button.appendChild(check);
+    }
 
     button.addEventListener("click", () => {
       if (typeof provider.reveal === "function") {
