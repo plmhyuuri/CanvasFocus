@@ -75,8 +75,10 @@ When something breaks:
    or `MISS` with the ones it tried. A few lines carry extra context rather than
    selector results: `scan` (module/item counts + resolved course name +
    confirmed-completion count), `courseNameCandidates` (every string considered
-   for the header), and `modulesWithoutItems` (a module that parsed to zero items
-   — usually one Canvas hadn't finished rendering; the panel re-scans).
+   for the header), `itemRowClasses` (the distinct class strings of item rows —
+   how you'd spot a completion marker we don't use yet), and `modulesWithoutItems`
+   (a module that parsed to zero items — usually one Canvas hadn't finished
+   rendering; the panel re-scans).
 3. Inspect the live page (right-click → Inspect) and **add a new selector to the
    front of the relevant list** in `selectors.js`. Do not delete the old ones
    unless you're sure they're gone — keeping them costs nothing.

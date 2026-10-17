@@ -207,6 +207,26 @@ test("exposes a short subject name derived from the Canvas code string", async (
   assert.equal(course.subjectKey, "MATHS");
 });
 
+test("reports item-row classes and empty modules in debug mode", async () => {
+  modules = [
+    makeModule({
+      id: "context_module_1",
+      title: "Tuần 1",
+      rows: [makeRow({ id: "a", type: "page", title: "P" })],
+    }),
+    makeModule({ id: "context_module_2", title: "Tuần 2", rows: [] }),
+  ];
+  crumbs = [el({ tag: "A", className: "crumb", text: "TOÁN 10" })];
+  provider = buildProvider();
+  CF.debug = true;
+  await provider.getCourses();
+
+  const classes = CF.debugReports.get("itemRowClasses");
+  assert.match(classes.matched, /context_module_item/, "dumps distinct row classes");
+  const empty = CF.debugReports.get("modulesWithoutItems");
+  assert.match(empty.matched, /Tuần 2/, "names the module that produced no items");
+});
+
 test("getCompletion() maps every item id to its boolean", async () => {
   modules = [
     makeModule({

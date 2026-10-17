@@ -171,6 +171,9 @@
     if (cache) return cache;
 
     const courseId = courseIdFromUrl();
+    // Distinct class strings across item rows — one debug line that reveals how
+    // (or whether) COMPLETED rows differ, without having to inspect the page.
+    const rowClassSet = new Set();
     const containers = pickAll(
       getCourseElement(),
       CF.selectors.SELECTORS.moduleContainer,
@@ -184,6 +187,7 @@
       const title = ((titleEl || container).textContent || "").trim();
 
       const rows = pickAll(container, CF.selectors.SELECTORS.itemRow, "itemRow");
+      for (const row of rows) rowClassSet.add((row.className || "").trim());
       const items = rows.map((row, i) => parseItem(row, moduleId, i));
 
       return {
@@ -213,6 +217,15 @@
     const emptyModules = modules.filter((m) => m.items.length === 0).map((m) => m.title);
     if (emptyModules.length) {
       CF.debugReport("modulesWithoutItems", { ok: true, matched: JSON.stringify(emptyModules) });
+    }
+
+    // Show the distinct item-row class sets. If completed rows carry a marker we
+    // don't yet use, it will appear here as an extra entry.
+    if (items.length) {
+      CF.debugReport("itemRowClasses", {
+        ok: true,
+        matched: JSON.stringify([...rowClassSet].slice(0, 8)),
+      });
     }
 
     return cache;
