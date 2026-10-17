@@ -283,15 +283,21 @@
   function renderHeader() {
     if (!refs.title) return;
     const course = state.course;
-    const name = course && course.name && course.name.trim();
+    // Prefer a short subject name ("TOÁN") over the full Canvas code string
+    // ("THAOBTP6-TOÁN-10-THPT-OCEAN PARK-2026 - 2027"); the full name is the tooltip.
+    const short = course && course.shortName ? course.shortName.trim() : "";
+    const full = course && course.name ? course.name.trim() : "";
+    refs.title.textContent = short || full || t("panelTitle");
+    refs.title.title = full;
+
     const subjectLabel = course && course.subjectKey
       ? CF.subjects.getSubjectLabel(course.subjectKey)
       : "";
-    // Never render a blank title: fall back to the generic panel label.
-    refs.title.textContent = name || t("panelTitle");
-    refs.subtitle.textContent = [subjectLabel, countLabel(state.counts.items)]
-      .filter(Boolean)
-      .join(" · ");
+    const subtitle = [];
+    // Don't repeat the subject when the title already IS the subject.
+    if (!short && subjectLabel) subtitle.push(subjectLabel);
+    subtitle.push(countLabel(state.counts.items));
+    refs.subtitle.textContent = subtitle.filter(Boolean).join(" · ");
   }
 
   function countLabel(n) {

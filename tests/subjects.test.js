@@ -58,3 +58,12 @@ test("getSubjectLabel localizes and falls back to the key", () => {
   assert.equal(getSubjectLabel("UNKNOWN", "en"), "UNKNOWN");
   assert.equal(getSubjectLabel("", "en"), "");
 });
+
+test("courseShortName extracts the subject from a Canvas code string", () => {
+  const { courseShortName } = CF.subjects;
+  assert.equal(courseShortName("THAOBTP6-TOÁN-10-THPT-OCEAN PARK-2026 - 2027"), "TOÁN");
+  assert.equal(courseShortName("HANGVM5-CÔNG DÂN TOÀN CẦU-10-2026 - 2027"), "CÔNG DÂN TOÀN CẦU");
+  assert.equal(courseShortName("TOÁN 10"), null, "no dash -> nothing safe to shorten");
+  assert.equal(courseShortName("ABC-SOMETHING ELSE-10-2026"), null, "unrecognised subject");
+  assert.equal(courseShortName(""), null);
+});

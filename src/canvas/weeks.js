@@ -21,8 +21,12 @@
 
   const CF = globalThis.__canvasFocus;
 
-  /** "tuần" / "tuân" / "tuan" / "week" (matches VinFocus `WEEK_KEYWORD`). */
-  const WEEK_KEYWORD = /(?:tu[âầa]?n|week)/i;
+  /**
+   * "tuần" / "tuân" / "tuan" / "week" (matches VinFocus `WEEK_KEYWORD`).
+   * The `u` flag makes case-insensitive folding of the Vietnamese diacritics
+   * ("TUẦN" -> "tuần") spec-correct rather than engine-dependent.
+   */
+  const WEEK_KEYWORD = /(?:tu[âầa]?n|week)/iu;
 
   /** Characters allowed inside a week expression (matches `WEEK_SEPARATORS`). */
   const WEEK_SEPARATORS = new Set(["-", "–", "+", "&", ",", "/", "=", ">", " "]);

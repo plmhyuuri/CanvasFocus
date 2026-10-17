@@ -144,7 +144,7 @@ test("parses modules, weeks, item types and completion conservatively", async ()
   provider = buildProvider();
   const [course] = await provider.getCourses();
   assert.equal(course.id, "9");
-  assert.equal(course.name, "TOÁN 10", "uses the last crumb WITH text (skips icon-only)");
+  assert.equal(course.name, "TOÁN 10", "picks the crumb with a real name, skipping the icon-only one");
 
   const mods = await provider.getModules("9");
   assert.equal(mods.length, 1);
@@ -188,6 +188,23 @@ test("falls back to document.title (part after the first colon) when no crumbs",
   provider = buildProvider();
   const [course] = await provider.getCourses();
   assert.equal(course.name, "FALLBACK COURSE");
+  assert.equal(course.shortName, null, "nothing safe to shorten a plain name to");
+});
+
+test("exposes a short subject name derived from the Canvas code string", async () => {
+  modules = [makeModule({ id: "context_module_1", title: "Tuần 1", rows: [] })];
+  crumbs = [
+    el({
+      tag: "A",
+      className: "crumb",
+      text: "THAOBTP6-TOÁN-10-THPT-OCEAN PARK-2026 - 2027",
+    }),
+  ];
+  provider = buildProvider();
+  const [course] = await provider.getCourses();
+  assert.equal(course.name, "THAOBTP6-TOÁN-10-THPT-OCEAN PARK-2026 - 2027");
+  assert.equal(course.shortName, "TOÁN", "second dash segment, recognised subject");
+  assert.equal(course.subjectKey, "MATHS");
 });
 
 test("getCompletion() maps every item id to its boolean", async () => {

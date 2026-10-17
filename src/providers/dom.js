@@ -26,13 +26,16 @@
    */
   const JUNK_NAME = /^[\s.…·•*+\-–—_/|,]*$/;
 
-  /** Canvas page/route words that are never a course name. */
+  /** Canvas page/route words that are never a course name (EN + VI). */
   const PAGE_WORDS = new Set([
     "modules", "home", "dashboard", "assignments", "grades", "pages", "files",
     "syllabus", "quizzes", "discussions", "announcements", "settings", "people",
     "outcomes", "rubrics", "collaborations", "conferences", "course", "courses",
     "account", "calendar", "inbox", "history", "student view", "course modules",
     "groups", "help",
+    "các học phần của khóa học", "trang chủ", "bảng điều khiển", "bài tập",
+    "điểm", "trang", "tệp", "đề cương", "thảo luận", "thông báo", "cài đặt",
+    "mọi người", "khóa học", "lịch", "hộp thư đến",
   ]);
 
   function looksLikeCourseName(text) {
@@ -204,6 +207,14 @@
         `course: ${courseName ? JSON.stringify(courseName) : "(empty)"}`,
       note: `completion: ${completed}/${items.length} confirmed`,
     });
+
+    // Name any module that yielded no items — usually one Canvas hasn't finished
+    // rendering yet (or a genuinely empty module); the route observer re-scans.
+    const emptyModules = modules.filter((m) => m.items.length === 0).map((m) => m.title);
+    if (emptyModules.length) {
+      CF.debugReport("modulesWithoutItems", { ok: true, matched: JSON.stringify(emptyModules) });
+    }
+
     return cache;
   }
 
@@ -243,9 +254,14 @@
       return {
         getCourses() {
           const data = scan();
-          const subjectKey = CF.subjects.subjectKeyFromText(data.courseName);
           return Promise.resolve([
-            { id: data.courseId, name: data.courseName, subjectKey },
+            {
+              id: data.courseId,
+              name: data.courseName,
+              // Short display name (e.g. "TOÁN") when the code string is recognised.
+              shortName: CF.subjects.courseShortName(data.courseName),
+              subjectKey: CF.subjects.subjectKeyFromText(data.courseName),
+            },
           ]);
         },
         getModules() {

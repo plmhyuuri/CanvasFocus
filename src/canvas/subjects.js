@@ -114,10 +114,30 @@
     return null;
   }
 
+  /**
+   * Short, human display name for a course derived from its Canvas code string,
+   * e.g. "THAOBTP6-TOÁN-10-THPT-OCEAN PARK-2026 - 2027" -> "TOÁN".
+   *
+   * Mirrors VinFocus's `courseSubjectKey`: the second dash-separated segment is the
+   * subject. We only shorten when that segment is a RECOGNISED subject name, so
+   * arbitrary course names are never mangled. Returns null when there's nothing
+   * safe to shorten to.
+   *
+   * @param {string} name full course name/code
+   * @returns {string|null}
+   */
+  function courseShortName(name) {
+    const parts = String(name || "").split("-");
+    if (parts.length < 2) return null;
+    const token = parts[1].trim();
+    return Object.prototype.hasOwnProperty.call(SUBJECT_NAME_TO_KEY, token) ? token : null;
+  }
+
   CF.subjects = {
     SUBJECT_LABELS,
     SUBJECT_NAME_TO_KEY,
     getSubjectLabel,
     subjectKeyFromText,
+    courseShortName,
   };
 })();

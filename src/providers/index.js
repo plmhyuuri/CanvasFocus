@@ -10,7 +10,7 @@
  * Contract — all methods return Promises so the DOM (sync) and session-fetch
  * (async) implementations are interchangeable:
  *
- *   getCourses()                  -> [{ id, name, subjectKey? }]
+ *   getCourses()                  -> [{ id, name, shortName?, subjectKey? }]
  *   getModules(courseId)          -> [{ id, title, weeks: number[] }]
  *   getItems(courseId, moduleId)  -> [{ id, title, type, url, completed, element? }]
  *   getCompletion(courseId)       -> { [itemId]: boolean }

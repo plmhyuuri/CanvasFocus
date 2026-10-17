@@ -38,6 +38,10 @@ open the panel, search, and jump to items.
 ## Using it
 
 - **Search** filters module items live (matches item title and module name).
+- The **header** shows a short course name: Canvas code strings like
+  `THAOBTP6-TOÁN-10-THPT-OCEAN PARK-2026 - 2027` are reduced to the recognized
+  subject (`TOÁN`); hover the header to see the full name. Unrecognized names are
+  shown as-is. See `courseShortName()` in `src/canvas/subjects.js`.
 - Items are **grouped by week**, parsed from module titles (`Tuần 1-3`, `Week 5 & 7`,
   …). Modules with no week info land in **Other**.
 - Click an item to **scroll to and expand** the real Canvas module row.
@@ -68,7 +72,11 @@ When something breaks:
 
 1. Open a Modules page with `?debug` in the URL (e.g. `…/modules?debug`).
 2. Read the diagnostics overlay: it prints, per field, the selector that matched
-   or `MISS` with the ones it tried.
+   or `MISS` with the ones it tried. A few lines carry extra context rather than
+   selector results: `scan` (module/item counts + resolved course name +
+   confirmed-completion count), `courseNameCandidates` (every string considered
+   for the header), and `modulesWithoutItems` (a module that parsed to zero items
+   — usually one Canvas hadn't finished rendering; the panel re-scans).
 3. Inspect the live page (right-click → Inspect) and **add a new selector to the
    front of the relevant list** in `selectors.js`. Do not delete the old ones
    unless you're sure they're gone — keeping them costs nothing.
@@ -154,7 +162,7 @@ tests/                     node:test suites for the pure logic (no deps)
 The UI only ever talks to the **provider contract** (`providers/index.js`):
 
 ```js
-getCourses()                  // [{ id, name, subjectKey? }]
+getCourses()                  // [{ id, name, shortName?, subjectKey? }]
 getModules(courseId)          // [{ id, title, weeks }]
 getItems(courseId, moduleId)  // [{ id, title, type, url, completed, element? }]
 getCompletion(courseId)       // { [itemId]: boolean }

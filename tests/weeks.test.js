@@ -51,3 +51,22 @@ test("results are cached and stable", () => {
   assert.deepEqual(a, [6, 7]);
   assert.equal(a, b, "same array instance returned from the memo cache");
 });
+
+// Real module titles observed on the live Vinschool page (uppercase "TUẦN").
+const LIVE_TITLES = [
+  ["Tuần 9 BÀI 3.5. TỈ LỆ THỨC", [9]],
+  ["TUẦN 7 - BÀI 2.3. HÀM SỐ VÀ KÍ HIỆU HÀM SỐ", [7]],
+  ["TUẦN 5+6 - BÀI 2.1. LẬP PHƯƠNG TRÌNH ĐỂ GIẢI BÀI TOÁN", [5, 6]],
+  ["TUẦN 4+5 - BÀI 1.7. HÀM ĐẠO HÀM", [4, 5]],
+  ["TUẦN 3+4 - BÀI 1.6. Tìm độ dốc của một đường cong", [3, 4]],
+  ["TUẦN 2+3 - BÀI 1.5. CÁC ĐỒ THỊ PHI TUYẾN TÍNH KHÁC", [2, 3]],
+  ["TUẦN 2 - Bài 1.4. Sử dụng đồ thị…", [2]],
+  ["TUẦN 1 BÀI 1.1. VẼ ĐỒ THỊ BẬC HAI (PARABOL)", [1]],
+  ["BÀI 2.6. TỈ LỆ THUẬN VÀ TỈ LỆ NGHỊCH TRONG ĐẠI SỐ", []],
+];
+
+for (const [input, expected] of LIVE_TITLES) {
+  test(`live title ${JSON.stringify(input)} -> [${expected}]`, () => {
+    assert.deepEqual(extractWeeks(input), expected);
+  });
+}
